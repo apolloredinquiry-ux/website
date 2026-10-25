@@ -128,7 +128,7 @@ export default function About() {
 
   const discordStatus = presence?.discord_status ?? 'offline'
   const discordAvatar = avatarUrl(presence)
-  const discordStatusText = presence ? presenceText(presence) : 'guns.lol'
+  const discordStatusText = presence ? presenceText(presence) : 'apollo.ceo'
   const discordStatusColor = statusColors[discordStatus]
 
   return (

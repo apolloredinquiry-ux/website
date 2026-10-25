@@ -47,7 +47,7 @@ export const badges: Badge[] = [
 
 export const socials: Social[] = [
   { label: 'Discord', href: 'https://discord.gg/lurkin', Icon: FaDiscord },
-  { label: 'Email', href: 'mailto:apollo@apollored.uk', Icon: FaEnvelope },
+  { label: 'Email', href: 'mailto:apollo@apollo.ceo', Icon: FaEnvelope },
 ]
 
 export const track: Track = {
