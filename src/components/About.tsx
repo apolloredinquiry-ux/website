@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FaDiscord, FaRegClock } from 'react-icons/fa'
 import { timezone } from '../data'
+import { useSettings } from '../settings'
 import {
   avatarUrl,
   useDiscordPresence,
@@ -74,6 +75,11 @@ export default function About() {
   const [now, setNow] = useState(() => new Date())
   const presence = useDiscordPresence()
   const discordName = useDisplayName()
+  const { settings } = useSettings()
+  const aboutParagraphs = settings.about
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 1000)
@@ -139,7 +145,9 @@ export default function About() {
 
       <Reveal delay={60}>
         <div className="about-card">
-          <p>i stay with the 5's</p>
+          {aboutParagraphs.map((paragraph, index) => (
+            <p key={index}>{paragraph}</p>
+          ))}
         </div>
       </Reveal>
 

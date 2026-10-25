@@ -1,17 +1,36 @@
-import { useRef, type PointerEvent as ReactPointerEvent } from 'react'
+import {
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
+import { createPortal } from 'react-dom'
 import { FaArrowDown, FaEye, FaMapMarkerAlt } from 'react-icons/fa'
 import { badges, profile, socials } from '../data'
+import { useSettings } from '../settings'
 import {
   avatarUrl,
   useDiscordPresence,
   useDisplayName,
 } from '../useDiscordPresence'
+import AdminAccess from './AdminAccess'
 
 export default function Hero() {
   const cardRef = useRef<HTMLDivElement>(null)
   const name = useDisplayName()
   const presence = useDiscordPresence()
   const avatar = avatarUrl(presence)
+  const { settings } = useSettings()
+  const [adminOpen, setAdminOpen] = useState(false)
+  const taps = useRef(0)
+
+  const handleAvatarClick = () => {
+    if (adminOpen) return
+    taps.current += 1
+    if (taps.current >= 10) {
+      taps.current = 0
+      setAdminOpen(true)
+    }
+  }
 
   const scrollToContent = () => {
     document.getElementById('about')?.scrollIntoView({
@@ -55,7 +74,7 @@ export default function Hero() {
         onPointerMove={handlePointerMove}
         onPointerLeave={resetCard}
       >
-        <div className="avatar-shell">
+        <div className="avatar-shell" onClick={handleAvatarClick}>
           <img
             className="avatar"
             src={avatar}
@@ -108,13 +127,17 @@ export default function Hero() {
 
       <div className="hero-meta">
         <span className="meta-item meta-views">
-          <FaEye aria-hidden="true" /> {profile.views}
+          <FaEye aria-hidden="true" /> {settings.views}
         </span>
         <span className="meta-divider" aria-hidden="true">
           |
         </span>
-        <span className="meta-item">
-          <FaMapMarkerAlt aria-hidden="true" /> {profile.location}
+        <span
+          className={`meta-item meta-location ${
+            settings.locationGlow ? 'is-glow' : ''
+          }`}
+        >
+          <FaMapMarkerAlt aria-hidden="true" /> {settings.location}
         </span>
       </div>
 
@@ -122,6 +145,12 @@ export default function Hero() {
         <span>Scroll for more</span>
         <FaArrowDown className="scroll-arrow" aria-hidden="true" />
       </button>
+
+      {adminOpen &&
+        createPortal(
+          <AdminAccess onClose={() => setAdminOpen(false)} />,
+          document.body,
+        )}
     </section>
   )
 }

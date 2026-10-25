@@ -13,7 +13,7 @@ import {
   FaPause,
   FaPlay,
 } from 'react-icons/fa'
-import { track } from '../data'
+import { useSettings } from '../settings'
 import Reveal from './Reveal'
 
 function formatTime(seconds: number) {
@@ -23,10 +23,17 @@ function formatTime(seconds: number) {
 }
 
 export default function MusicPlayer() {
+  const { settings } = useSettings()
   const audioRef = useRef<HTMLAudioElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [position, setPosition] = useState(0)
   const [duration, setDuration] = useState(0)
+
+  useEffect(() => {
+    setPosition(0)
+    setDuration(0)
+    setIsPlaying(false)
+  }, [settings.trackSrc])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -152,8 +159,8 @@ export default function MusicPlayer() {
             </span>
 
             <div className="music-meta">
-              <span className="music-title">{track.title}</span>
-              <span className="music-artist">{track.artist}</span>
+              <span className="music-title">{settings.trackTitle}</span>
+              <span className="music-artist">{settings.trackArtist}</span>
             </div>
 
             <div className="music-controls">
@@ -218,7 +225,12 @@ export default function MusicPlayer() {
         </div>
       </Reveal>
 
-      <audio ref={audioRef} src={track.src} preload="auto" data-track />
+      <audio
+        ref={audioRef}
+        src={settings.trackSrc}
+        preload="auto"
+        data-track
+      />
     </section>
   )
 }
