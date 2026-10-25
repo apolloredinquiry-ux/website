@@ -5,10 +5,13 @@ import Background from './components/Background'
 import GalleryImage from './components/GalleryImage'
 import Hero from './components/Hero'
 import { useDisplayName } from './useDiscordPresence'
+import useSectionPaging from './useSectionPaging'
 
 export default function App() {
   const [entered, setEntered] = useState(false)
   const name = useDisplayName()
+
+  useSectionPaging(entered)
 
   useEffect(() => {
     document.title = `@${name} | apollo.ceo`

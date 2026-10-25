@@ -17,13 +17,13 @@
 html {
   scroll-behavior: smooth;
   background: var(--bg);
-  scroll-snap-type: y proximity;
 }
 
 body {
   margin: 0;
   min-width: 320px;
-  overflow-x: hidden;
+  /* clip keeps body out of the scroll chain, so scrollIntoView still reaches the page */
+  overflow-x: clip;
   background: var(--bg);
   color: var(--text);
   font-family: var(--sans);
@@ -342,13 +342,6 @@ button {
 main {
   position: relative;
   z-index: 3;
-}
-
-.hero,
-.about-section,
-.media-panel {
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
 }
 
 .about-section {
