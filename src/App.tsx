@@ -10,7 +10,7 @@ export default function App() {
   const name = useDisplayName()
 
   useEffect(() => {
-    document.title = `@${name} | $`
+    document.title = `@${name} | apollored.uk`
   }, [name])
 
   useEffect(() => {
