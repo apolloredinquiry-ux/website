@@ -104,8 +104,8 @@ button {
   width: min(430px, calc(100vw - 40px));
   padding: clamp(30px, 4vw, 44px) clamp(20px, 4vw, 38px)
     clamp(28px, 4vw, 38px);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 36px;
+  border: 2px solid rgba(39, 39, 39, 0.2);
+  border-radius: 40px;
   background:
     radial-gradient(
       120% 120% at var(--mx) var(--my),
@@ -113,11 +113,12 @@ button {
       rgba(255, 255, 255, 0.015) 44%,
       transparent 72%
     ),
-    #000;
+    rgba(28, 28, 28, 0.4);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
   box-shadow:
-    var(--sx) var(--sy) 120px rgba(0, 0, 0, 0.85),
-    0 16px 40px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    var(--sx) var(--sy) 90px rgba(0, 0, 0, 0.55),
+    0 18px 44px rgba(0, 0, 0, 0.35);
   text-align: center;
   transform: rotateX(var(--rx)) rotateY(var(--ry));
   transform-style: preserve-3d;
@@ -125,19 +126,6 @@ button {
   transition:
     transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1),
     box-shadow 0.4s ease;
-}
-
-.hero-inner::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  background: #050506;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
-  opacity: 0.92;
-  transform: translateZ(-52px) scale(0.972);
-  pointer-events: none;
 }
 
 .hero-inner::before {
@@ -1102,7 +1090,7 @@ main {
   .hero-inner {
     width: calc(100vw - 32px);
     padding: 32px 20px 30px;
-    border-radius: 30px;
+    border-radius: 40px;
   }
 
   .avatar-shell {
