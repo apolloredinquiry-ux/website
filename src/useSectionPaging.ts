@@ -1,8 +1,9 @@
 import { useEffect } from 'react'
 
 const SECTION_SELECTOR = '.hero, .about-section, .media-panel'
-const WHEEL_THRESHOLD = 26
-const LOCK_MS = 620
+// Quiet time that ends a wheel/trackpad gesture, and cooldown while a jump animates.
+const GESTURE_GAP_MS = 160
+const SETTLE_MS = 480
 
 function prefersReducedMotion() {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -65,16 +66,15 @@ export default function useSectionPaging(enabled: boolean) {
   useEffect(() => {
     if (!enabled) return
 
-    let lockedUntil = 0
-    let pending = 0
-    let resetTimer = 0
+    let lastJumpAt = 0
+    let gestureJumped = false
+    let gapTimer = 0
 
     const goTo = (index: number, list: { element: HTMLElement; top: number }[]) => {
       const target = list[Math.min(list.length - 1, Math.max(0, index))]
       if (!target) return
 
       const start = window.scrollY
-      lockedUntil = performance.now() + LOCK_MS
 
       if (prefersReducedMotion()) {
         window.scrollTo({ top: target.top, behavior: 'instant' })
@@ -99,14 +99,7 @@ export default function useSectionPaging(enabled: boolean) {
     }
 
     const onWheel = (event: WheelEvent) => {
-      if (event.ctrlKey || modalOpen()) return
-
-      const now = performance.now()
-      if (now < lockedUntil) {
-        event.preventDefault()
-        return
-      }
-
+      if (event.ctrlKey || event.deltaY === 0 || modalOpen()) return
       if (ownsScroll(event.target, event.deltaY)) return
 
       const list = sectionTops()
@@ -120,17 +113,19 @@ export default function useSectionPaging(enabled: boolean) {
 
       event.preventDefault()
 
-      pending += event.deltaY
-      window.clearTimeout(resetTimer)
-      resetTimer = window.setTimeout(() => {
-        pending = 0
-      }, 220)
+      // The lightest flick counts as a gesture, and one gesture advances one whole section.
+      const now = performance.now()
+      window.clearTimeout(gapTimer)
+      gapTimer = window.setTimeout(() => {
+        gestureJumped = false
+      }, GESTURE_GAP_MS)
 
-      if (Math.abs(pending) < WHEEL_THRESHOLD) return
+      // Ignore the rest of this gesture (inertia) and anything arriving mid-animation.
+      if (gestureJumped || now - lastJumpAt < SETTLE_MS) return
 
-      const direction = pending > 0 ? 1 : -1
-      pending = 0
-      step(direction)
+      gestureJumped = true
+      lastJumpAt = now
+      step(event.deltaY > 0 ? 1 : -1)
     }
 
     const onKeyDown = (event: KeyboardEvent) => {
@@ -171,7 +166,7 @@ export default function useSectionPaging(enabled: boolean) {
     return () => {
       window.removeEventListener('wheel', onWheel)
       window.removeEventListener('keydown', onKeyDown)
-      window.clearTimeout(resetTimer)
+      window.clearTimeout(gapTimer)
     }
   }, [enabled])
 }
