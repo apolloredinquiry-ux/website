@@ -77,7 +77,7 @@ export default function useSectionPaging(enabled: boolean) {
       lockedUntil = performance.now() + LOCK_MS
 
       if (prefersReducedMotion()) {
-        window.scrollTo({ top: target.top, behavior: 'auto' })
+        window.scrollTo({ top: target.top, behavior: 'instant' })
         return
       }
 
@@ -87,7 +87,7 @@ export default function useSectionPaging(enabled: boolean) {
       // If nothing moved, land on the section instead of leaving the page stuck.
       window.setTimeout(() => {
         if (Math.abs(window.scrollY - start) < 4 && Math.abs(window.scrollY - target.top) > 4) {
-          window.scrollTo({ top: target.top, behavior: 'auto' })
+          window.scrollTo({ top: target.top, behavior: 'instant' })
         }
       }, 500)
     }
