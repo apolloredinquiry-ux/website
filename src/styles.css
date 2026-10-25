@@ -458,13 +458,12 @@ main {
 .music-card {
   width: min(640px, 100%);
   margin: 0 auto;
-  padding: 26px 30px 22px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 36px;
-  background: #000;
-  box-shadow:
-    0 40px 100px rgba(0, 0, 0, 0.65),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  padding: 28px;
+  border: 2px solid rgba(39, 39, 39, 0.2);
+  border-radius: 40px;
+  background: rgba(28, 28, 28, 0.4);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
 }
 
 .music-head {
@@ -1158,8 +1157,8 @@ main {
 
   .music-card {
     width: 100%;
-    padding: 18px 16px 16px;
-    border-radius: 26px;
+    padding: 22px 20px;
+    border-radius: 40px;
   }
 
   .music-head {
