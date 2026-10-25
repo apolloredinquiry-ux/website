@@ -1,21 +1,13 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { verifyKey } from '../api'
 import AdminPanel from './AdminPanel'
 
-const KEY_ENDPOINT = '/api/admin.json'
-
 type Phase = 'granted' | 'key' | 'panel'
-
-async function hashKey(value: string) {
-  const bytes = new TextEncoder().encode(value)
-  const digest = await crypto.subtle.digest('SHA-256', bytes)
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('')
-}
 
 export default function AdminAccess({ onClose }: { onClose: () => void }) {
   const [phase, setPhase] = useState<Phase>('granted')
   const [key, setKey] = useState('')
+  const [adminKey, setAdminKey] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [checking, setChecking] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -47,29 +39,25 @@ export default function AdminAccess({ onClose }: { onClose: () => void }) {
     setError('')
 
     try {
-      const response = await fetch(KEY_ENDPOINT, { cache: 'no-store' })
-      if (!response.ok) throw new Error('unavailable')
-      const payload = (await response.json()) as { keyHash?: string }
-      if (!payload.keyHash) throw new Error('unavailable')
-
-      const digest = await hashKey(value)
-      if (digest !== payload.keyHash.toLowerCase()) {
+      const accepted = await verifyKey(value)
+      if (!accepted) {
         setError('invalid key')
         setKey('')
         inputRef.current?.focus()
         return
       }
 
+      setAdminKey(value)
       setPhase('panel')
     } catch {
-      setError('key service unavailable')
+      setError('could not reach the server')
     } finally {
       setChecking(false)
     }
   }
 
-  if (phase === 'panel') {
-    return <AdminPanel onClose={onClose} />
+  if (phase === 'panel' && adminKey) {
+    return <AdminPanel adminKey={adminKey} onClose={onClose} />
   }
 
   return (

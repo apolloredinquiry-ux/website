@@ -4,15 +4,21 @@ import { defaultSettings, useSettings } from '../settings'
 
 const MAX_FILE_BYTES = 25 * 1024 * 1024
 
-export default function AdminPanel({ onClose }: { onClose: () => void }) {
-  const { settings, update, reset, setTrackFile, clearTrackFile } = useSettings()
+export default function AdminPanel({
+  adminKey,
+  onClose,
+}: {
+  adminKey: string
+  onClose: () => void
+}) {
+  const { settings, save, upload, reset } = useSettings()
   const [views, setViews] = useState(settings.views)
   const [location, setLocation] = useState(settings.location)
   const [about, setAbout] = useState(settings.about)
   const [glow, setGlow] = useState(settings.locationGlow)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState<'save' | 'upload' | 'reset' | null>(null)
 
   useEffect(() => {
     const previous = document.body.style.overflow
@@ -36,15 +42,25 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
     return () => window.clearTimeout(id)
   }, [saved])
 
-  const save = () => {
-    update({
-      views: views.trim() || '0',
-      location: location.trim(),
-      locationGlow: glow,
-      about: about.trim(),
-    })
+  const handleSave = async () => {
+    setBusy('save')
     setError('')
-    setSaved(true)
+    try {
+      await save(
+        {
+          views: views.trim() || '0',
+          location: location.trim(),
+          locationGlow: glow,
+          about: about.trim(),
+        },
+        adminKey,
+      )
+      setSaved(true)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'could not save')
+    } finally {
+      setBusy(null)
+    }
   }
 
   const handleFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -65,24 +81,32 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
     }
 
     setError('')
-    setBusy(true)
+    setBusy('upload')
     try {
-      await setTrackFile(file)
-    } catch {
-      setError('could not store that file')
+      await upload(file, adminKey)
+      setSaved(true)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'could not upload')
     } finally {
-      setBusy(false)
+      setBusy(null)
     }
   }
 
   const handleReset = async () => {
-    await reset()
-    setViews(defaultSettings.views)
-    setLocation(defaultSettings.location)
-    setAbout(defaultSettings.about)
-    setGlow(defaultSettings.locationGlow)
+    setBusy('reset')
     setError('')
-    setSaved(true)
+    try {
+      await reset(adminKey)
+      setViews(defaultSettings.views)
+      setLocation(defaultSettings.location)
+      setAbout(defaultSettings.about)
+      setGlow(defaultSettings.locationGlow)
+      setSaved(true)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'could not reset')
+    } finally {
+      setBusy(null)
+    }
   }
 
   const songLabel = settings.customTrack
@@ -101,6 +125,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="admin-title"
+        aria-busy={busy !== null}
       >
         <header className="admin-head">
           <div>
@@ -177,25 +202,18 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
               <span className="admin-song-name" title={songLabel}>
                 {songLabel}
               </span>
-              <label className={`admin-upload ${busy ? 'is-busy' : ''}`}>
-                {busy ? 'Saving…' : 'Upload'}
+              <label
+                className={`admin-upload ${busy === 'upload' ? 'is-busy' : ''}`}
+              >
+                {busy === 'upload' ? 'Uploading…' : 'Upload'}
                 <input
                   type="file"
                   accept="audio/*,.mp3,.wav,.ogg,.m4a,.flac"
                   onChange={handleFile}
-                  disabled={busy}
+                  disabled={busy !== null}
                 />
               </label>
             </div>
-            {settings.customTrack && (
-              <button
-                className="admin-link"
-                type="button"
-                onClick={() => void clearTrackFile()}
-              >
-                Use the default track
-              </button>
-            )}
           </div>
 
           {error && <p className="admin-error">{error}</p>}
@@ -205,16 +223,22 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
           <button
             className="admin-reset"
             type="button"
+            disabled={busy !== null}
             onClick={() => void handleReset()}
           >
-            Reset defaults
+            {busy === 'reset' ? 'Resetting…' : 'Reset defaults'}
           </button>
-          <button className="admin-save" type="button" onClick={save}>
-            {saved ? 'Saved' : 'Save changes'}
+          <button
+            className="admin-save"
+            type="button"
+            disabled={busy !== null}
+            onClick={() => void handleSave()}
+          >
+            {busy === 'save' ? 'Saving…' : saved ? 'Saved' : 'Save changes'}
           </button>
         </footer>
 
-        <p className="admin-note">Changes are stored in this browser.</p>
+        <p className="admin-note">Changes save for everyone visiting apollo.ceo.</p>
       </div>
     </div>
   )

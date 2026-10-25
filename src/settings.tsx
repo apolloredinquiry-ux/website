@@ -4,10 +4,16 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from 'react'
+import {
+  fetchProfile,
+  saveProfile,
+  trackUrl,
+  uploadTrack,
+  type RemoteProfile,
+} from './api'
 import { profile, track } from './data'
 
 export type Settings = {
@@ -15,6 +21,7 @@ export type Settings = {
   location: string
   locationGlow: boolean
   about: string
+  trackKey: string | null
   trackSrc: string
   trackTitle: string
   trackArtist: string
@@ -23,162 +30,112 @@ export type Settings = {
 
 type SettingsContextValue = {
   settings: Settings
-  update: (patch: Partial<Settings>) => void
-  reset: () => Promise<void>
-  setTrackFile: (file: File) => Promise<void>
-  clearTrackFile: () => Promise<void>
+  loading: boolean
+  save: (patch: Partial<Settings>, key: string) => Promise<void>
+  upload: (file: File, key: string) => Promise<void>
+  reset: (key: string) => Promise<void>
 }
 
-const STORAGE_KEY = 'apollo:admin:settings'
-const DB_NAME = 'apollo-admin'
-const STORE_NAME = 'files'
-const TRACK_KEY = 'track'
+const CACHE_KEY = 'apollo:profile:v2'
 
 export const defaultSettings: Settings = {
   views: profile.views,
   location: profile.location,
   locationGlow: false,
   about: "i stay with the 5's",
+  trackKey: null,
   trackSrc: track.src,
   trackTitle: track.title,
   trackArtist: track.artist,
   customTrack: false,
 }
 
-type StoredTrack = { name: string; blob: Blob }
-
-function openTrackDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1)
-    request.onupgradeneeded = () => {
-      const db = request.result
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME)
-      }
-    }
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error)
-  })
-}
-
-async function readTrack(): Promise<StoredTrack | null> {
-  const db = await openTrackDb()
-  try {
-    return await new Promise((resolve, reject) => {
-      const request = db
-        .transaction(STORE_NAME, 'readonly')
-        .objectStore(STORE_NAME)
-        .get(TRACK_KEY)
-      request.onsuccess = () =>
-        resolve((request.result as StoredTrack | undefined) ?? null)
-      request.onerror = () => reject(request.error)
-    })
-  } finally {
-    db.close()
+function fromRemote(remote: RemoteProfile): Settings {
+  return {
+    views: remote.views,
+    location: remote.location,
+    locationGlow: remote.locationGlow,
+    about: remote.about,
+    trackKey: remote.trackKey,
+    trackSrc: remote.trackKey ? trackUrl(remote.trackKey) : track.src,
+    trackTitle: remote.trackTitle || track.title,
+    trackArtist: remote.trackArtist || track.artist,
+    customTrack: remote.customTrack,
   }
 }
 
-async function writeTrack(value: StoredTrack): Promise<void> {
-  const db = await openTrackDb()
-  try {
-    await new Promise<void>((resolve, reject) => {
-      const request = db
-        .transaction(STORE_NAME, 'readwrite')
-        .objectStore(STORE_NAME)
-        .put(value, TRACK_KEY)
-      request.onsuccess = () => resolve()
-      request.onerror = () => reject(request.error)
-    })
-  } finally {
-    db.close()
+function toRemote(settings: Settings): RemoteProfile {
+  return {
+    views: settings.views,
+    location: settings.location,
+    locationGlow: settings.locationGlow,
+    about: settings.about,
+    trackKey: settings.trackKey,
+    trackTitle: settings.trackTitle,
+    trackArtist: settings.trackArtist,
+    customTrack: settings.customTrack,
   }
 }
 
-async function clearTrack(): Promise<void> {
-  const db = await openTrackDb()
+function readCache(): Settings {
   try {
-    await new Promise<void>((resolve, reject) => {
-      const request = db
-        .transaction(STORE_NAME, 'readwrite')
-        .objectStore(STORE_NAME)
-        .delete(TRACK_KEY)
-      request.onsuccess = () => resolve()
-      request.onerror = () => reject(request.error)
-    })
-  } finally {
-    db.close()
-  }
-}
-
-function loadSettings(): Settings {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(CACHE_KEY)
     if (!raw) return { ...defaultSettings }
-    const saved = JSON.parse(raw) as Partial<Settings>
-    return {
-      ...defaultSettings,
-      views: typeof saved.views === 'string' ? saved.views : defaultSettings.views,
-      location:
-        typeof saved.location === 'string'
-          ? saved.location
-          : defaultSettings.location,
-      locationGlow: saved.locationGlow === true,
-      about: typeof saved.about === 'string' ? saved.about : defaultSettings.about,
-      trackTitle:
-        typeof saved.trackTitle === 'string'
-          ? saved.trackTitle
-          : defaultSettings.trackTitle,
-      trackArtist:
-        typeof saved.trackArtist === 'string'
-          ? saved.trackArtist
-          : defaultSettings.trackArtist,
-      customTrack: saved.customTrack === true,
+    const remote = JSON.parse(raw) as Partial<RemoteProfile>
+    if (
+      !remote ||
+      typeof remote.views !== 'string' ||
+      typeof remote.location !== 'string' ||
+      typeof remote.about !== 'string'
+    ) {
+      return { ...defaultSettings }
     }
+    return fromRemote({
+      ...toRemote(defaultSettings),
+      ...remote,
+    } as RemoteProfile)
   } catch {
     return { ...defaultSettings }
   }
 }
 
-function persist(settings: Settings) {
-  const saved: Omit<Settings, 'trackSrc'> = {
-    views: settings.views,
-    location: settings.location,
-    locationGlow: settings.locationGlow,
-    about: settings.about,
-    trackTitle: settings.trackTitle,
-    trackArtist: settings.trackArtist,
-    customTrack: settings.customTrack,
-  }
+function writeCache(remote: RemoteProfile) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(saved))
+    localStorage.setItem(CACHE_KEY, JSON.stringify(remote))
   } catch {
-    // Storage can be unavailable; edits still apply for this visit.
+    // Caching is best-effort; the API remains the source of truth.
   }
 }
 
 const SettingsContext = createContext<SettingsContextValue | null>(null)
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<Settings>(loadSettings)
-  const objectUrl = useRef<string | null>(null)
-
-  useEffect(() => {
-    persist(settings)
-  }, [settings])
+  const [settings, setSettings] = useState<Settings>(readCache)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
 
-    readTrack()
-      .then((stored) => {
-        if (cancelled || !stored) return
-        const url = URL.createObjectURL(stored.blob)
-        if (objectUrl.current) URL.revokeObjectURL(objectUrl.current)
-        objectUrl.current = url
-        setSettings((prev) => ({ ...prev, trackSrc: url }))
+    fetchProfile()
+      .then((remote) => {
+        if (cancelled) return
+        if (!remote) {
+          setSettings({ ...defaultSettings })
+          try {
+            localStorage.removeItem(CACHE_KEY)
+          } catch {
+            // Ignore storage failures.
+          }
+          return
+        }
+        setSettings(fromRemote(remote))
+        writeCache(remote)
       })
       .catch(() => {
-        // No stored track; the bundled default keeps playing.
+        // Keep the cached profile when the API is unreachable.
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
       })
 
     return () => {
@@ -186,71 +143,50 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  useEffect(
-    () => () => {
-      if (objectUrl.current) {
-        URL.revokeObjectURL(objectUrl.current)
-        objectUrl.current = null
-      }
+  const save = useCallback(
+    async (patch: Partial<Settings>, key: string) => {
+      const saved = await saveProfile(toRemote({ ...settings, ...patch }), key)
+      setSettings(fromRemote(saved))
+      writeCache(saved)
     },
-    [],
+    [settings],
   )
 
-  const update = useCallback((patch: Partial<Settings>) => {
-    setSettings((prev) => ({ ...prev, ...patch }))
-  }, [])
+  const upload = useCallback(
+    async (file: File, key: string) => {
+      const trackKey = await uploadTrack(file, key)
+      const title =
+        file.name
+          .replace(/\.[^.]+$/, '')
+          .replace(/[-_]+/g, ' ')
+          .trim() || 'custom track'
 
-  const setTrackFile = useCallback(async (file: File) => {
-    await writeTrack({ name: file.name, blob: file })
-    const url = URL.createObjectURL(file)
-    if (objectUrl.current) URL.revokeObjectURL(objectUrl.current)
-    objectUrl.current = url
-    const title = file.name
-      .replace(/\.[^.]+$/, '')
-      .replace(/[-_]+/g, ' ')
-      .trim()
+      const saved = await saveProfile(
+        toRemote({
+          ...settings,
+          trackKey,
+          trackSrc: trackUrl(trackKey),
+          trackTitle: title,
+          trackArtist: 'custom upload',
+          customTrack: true,
+        }),
+        key,
+      )
+      setSettings(fromRemote(saved))
+      writeCache(saved)
+    },
+    [settings],
+  )
 
-    setSettings((prev) => ({
-      ...prev,
-      trackSrc: url,
-      trackTitle: title || 'custom track',
-      trackArtist: 'custom upload',
-      customTrack: true,
-    }))
-  }, [])
-
-  const clearTrackFile = useCallback(async () => {
-    await clearTrack()
-    if (objectUrl.current) {
-      URL.revokeObjectURL(objectUrl.current)
-      objectUrl.current = null
-    }
-    setSettings((prev) => ({
-      ...prev,
-      trackSrc: track.src,
-      trackTitle: track.title,
-      trackArtist: track.artist,
-      customTrack: false,
-    }))
-  }, [])
-
-  const reset = useCallback(async () => {
-    try {
-      localStorage.removeItem(STORAGE_KEY)
-    } catch {
-      // Ignore storage failures.
-    }
-    await clearTrack().catch(() => undefined)
-    if (objectUrl.current) {
-      URL.revokeObjectURL(objectUrl.current)
-      objectUrl.current = null
-    }
-    setSettings({ ...defaultSettings })
+  const reset = useCallback(async (key: string) => {
+    const saved = await saveProfile(toRemote(defaultSettings), key)
+    setSettings(fromRemote(saved))
+    writeCache(saved)
   }, [])
 
   const value = useMemo(
-    () => ({ settings, update, reset, setTrackFile, clearTrackFile }),
-    [settings, update, reset, setTrackFile, clearTrackFile],
+    () => ({ settings, loading, save, upload, reset }),
+    [settings, loading, save, upload, reset],
   )
 
   return (
