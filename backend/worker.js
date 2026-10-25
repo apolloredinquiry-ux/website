@@ -5,6 +5,8 @@
 // POST /api/verify      check the panel key (requires x-admin-key)
 // POST /api/track       upload an audio file (requires x-admin-key, multipart "file")
 // GET  /api/track/<key> streams a stored track with range support
+// POST /api/asset       upload an image or video (requires x-admin-key, multipart "file")
+// GET  /api/asset/<key> serves a stored image or video with range support
 //
 // Bindings: DB (D1), FILES (R2), ADMIN_KEY (secret).
 
@@ -15,8 +17,14 @@ const JSON_HEADERS = {
 }
 
 const MAX_TRACK_BYTES = 25 * 1024 * 1024
-const MAX_BODY_BYTES = 16 * 1024
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024
+const MAX_VIDEO_BYTES = 25 * 1024 * 1024
+const MAX_BODY_BYTES = 32 * 1024
 const AUDIO_EXTENSIONS = new Set(['mp3', 'wav', 'ogg', 'oga', 'm4a', 'aac', 'flac'])
+const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'])
+const VIDEO_EXTENSIONS = new Set(['mp4', 'webm', 'mov', 'm4v'])
+const TRACK_KEY = /^tracks\/[a-zA-Z0-9-]+\.[a-z0-9]{2,5}$/
+const ASSET_KEY = /^assets\/[a-zA-Z0-9-]+\.[a-z0-9]{2,5}$/
 
 let schemaReady = null
 
@@ -87,20 +95,76 @@ function text(value, max) {
   return typeof value === 'string' ? value.slice(0, max) : null
 }
 
-function sanitizeProfile(input) {
+function parseKey(value, pattern) {
+  if (value === null) return null
+  if (typeof value !== 'string') return undefined
+  return pattern.test(value) ? value : undefined
+}
+
+function keptKey(value, pattern) {
+  return typeof value === 'string' && pattern.test(value) ? value : null
+}
+
+function sanitizeProfile(input, previous) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return null
+  const base = previous && typeof previous === 'object' ? previous : {}
 
   const views = text(input.views, 32)
   const location = text(input.location, 80)
   const about = text(input.about, 1200)
   const trackTitle = text(input.trackTitle, 120)
   const trackArtist = text(input.trackArtist, 120)
-  const trackKey = input.trackKey === null ? null : text(input.trackKey, 200)
+  // Older clients do not send the newer fields; keep what is already stored.
+  const trackKey =
+    input.trackKey === undefined
+      ? keptKey(base.trackKey, TRACK_KEY)
+      : parseKey(input.trackKey, TRACK_KEY)
 
   if (views === null || location === null || about === null) return null
   if (typeof input.locationGlow !== 'boolean') return null
   if (typeof input.customTrack !== 'boolean') return null
-  if (trackKey !== null && !/^tracks\/[a-zA-Z0-9-]+\.[a-z0-9]{2,5}$/.test(trackKey)) {
+  if (trackKey === undefined) return null
+
+  const imageKey =
+    input.imageKey === undefined
+      ? keptKey(base.imageKey, ASSET_KEY)
+      : parseKey(input.imageKey, ASSET_KEY)
+  const imageCaption =
+    input.imageCaption === undefined
+      ? typeof base.imageCaption === 'string'
+        ? base.imageCaption.slice(0, 140)
+        : ''
+      : text(input.imageCaption, 140)
+  const radiusInput =
+    input.imageRadius === undefined ? base.imageRadius : input.imageRadius
+  const imageRadius = Number.isFinite(radiusInput)
+    ? Math.min(64, Math.max(0, Math.round(radiusInput)))
+    : 32
+  const imageGlow =
+    input.imageGlow === undefined ? base.imageGlow === true : input.imageGlow
+  const fitInput = input.imageFit === undefined ? base.imageFit : input.imageFit
+  const imageFit = fitInput === 'contain' ? 'contain' : 'cover'
+
+  const backgroundKey =
+    input.backgroundKey === undefined
+      ? keptKey(base.backgroundKey, ASSET_KEY)
+      : parseKey(input.backgroundKey, ASSET_KEY)
+  const kindInput =
+    input.backgroundKind === undefined
+      ? base.backgroundKind
+      : input.backgroundKind
+  const backgroundKind = backgroundKey
+    ? kindInput === 'video'
+      ? 'video'
+      : 'image'
+    : null
+
+  if (
+    imageKey === undefined ||
+    backgroundKey === undefined ||
+    imageCaption === null ||
+    typeof imageGlow !== 'boolean'
+  ) {
     return null
   }
 
@@ -113,6 +177,13 @@ function sanitizeProfile(input) {
     trackTitle: trackTitle ?? '',
     trackArtist: trackArtist ?? '',
     customTrack: input.customTrack && trackKey !== null,
+    imageKey,
+    imageCaption,
+    imageRadius,
+    imageGlow,
+    imageFit,
+    backgroundKey,
+    backgroundKind,
   }
 }
 
@@ -190,11 +261,28 @@ async function readJsonBody(request) {
   }
 }
 
-function trackKeyFromPath(pathname) {
-  const prefix = '/api/track/'
-  if (!pathname.startsWith(prefix)) return null
-  const key = decodeURIComponent(pathname.slice(prefix.length))
-  return /^tracks\/[a-zA-Z0-9-]+\.[a-z0-9]{2,5}$/.test(key) ? key : null
+function objectKeyFromPath(pathname) {
+  const trackPrefix = '/api/track/'
+  const assetPrefix = '/api/asset/'
+  if (pathname.startsWith(trackPrefix)) {
+    const key = decodeURIComponent(pathname.slice(trackPrefix.length))
+    return TRACK_KEY.test(key) ? key : null
+  }
+  if (pathname.startsWith(assetPrefix)) {
+    const key = decodeURIComponent(pathname.slice(assetPrefix.length))
+    return ASSET_KEY.test(key) ? key : null
+  }
+  return null
+}
+
+function uploadKind(file) {
+  const type = (file.type || '').toLowerCase()
+  if (type.startsWith('image/')) return 'image'
+  if (type.startsWith('video/')) return 'video'
+  const extension = (file.name.split('.').pop() || '').toLowerCase()
+  if (IMAGE_EXTENSIONS.has(extension)) return 'image'
+  if (VIDEO_EXTENSIONS.has(extension)) return 'video'
+  return null
 }
 
 async function handleRequest(request, env) {
@@ -217,6 +305,8 @@ async function handleRequest(request, env) {
           '/api/verify',
           '/api/track',
           '/api/track/<key>',
+          '/api/asset',
+          '/api/asset/<key>',
         ],
       },
       200,
@@ -245,24 +335,81 @@ async function handleRequest(request, env) {
     if (body.tooLarge) return json({ error: 'body too large' }, 413, origin)
     if (body.invalid) return json({ error: 'invalid json' }, 400, origin)
 
-    const profile = sanitizeProfile(body.value)
-    if (!profile) return json({ error: 'invalid profile' }, 400, origin)
-
     try {
       const previous = await loadProfile(env)
-      if (
-        previous &&
-        previous.trackKey &&
-        previous.trackKey !== profile.trackKey &&
-        previous.trackKey.startsWith('tracks/')
-      ) {
-        await env.FILES.delete(previous.trackKey)
-      }
+      const profile = sanitizeProfile(body.value, previous)
+      if (!profile) return json({ error: 'invalid profile' }, 400, origin)
+
       await saveProfile(env, profile)
+
+      // Drop uploads the new profile no longer references.
+      const keep = new Set(
+        [profile.trackKey, profile.imageKey, profile.backgroundKey].filter(
+          (key) => typeof key === 'string',
+        ),
+      )
+      const stale = [
+        previous && previous.trackKey,
+        previous && previous.imageKey,
+        previous && previous.backgroundKey,
+      ].filter((key) => typeof key === 'string' && !keep.has(key))
+      await Promise.allSettled(stale.map((key) => env.FILES.delete(key)))
+
       return json({ ok: true, profile }, 200, origin)
     } catch {
       return json({ error: 'storage unavailable' }, 503, origin)
     }
+  }
+
+  if (pathname === '/api/asset' && request.method === 'POST') {
+    if (!authorized(request, env)) return json({ error: 'unauthorized' }, 401, origin)
+
+    let form
+    try {
+      form = await request.formData()
+    } catch {
+      return json({ error: 'invalid upload' }, 400, origin)
+    }
+
+    const file = form.get('file')
+    if (!file || typeof file === 'string') {
+      return json({ error: 'missing file' }, 400, origin)
+    }
+
+    const kind = uploadKind(file)
+    if (!kind) return json({ error: 'unsupported media type' }, 415, origin)
+
+    const limit = kind === 'video' ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES
+    if (file.size > limit) {
+      return json(
+        { error: kind === 'video' ? 'video must be under 25 MB' : 'image must be under 10 MB' },
+        413,
+        origin,
+      )
+    }
+
+    const extension =
+      (file.name.split('.').pop() || '').toLowerCase() ||
+      (file.type.split('/')[1] || '').toLowerCase()
+    const allowed = kind === 'video' ? VIDEO_EXTENSIONS : IMAGE_EXTENSIONS
+    if (!allowed.has(extension)) {
+      return json({ error: 'unsupported media type' }, 415, origin)
+    }
+
+    const assetKey = `assets/${crypto.randomUUID()}.${extension}`
+    try {
+      const bytes = await file.arrayBuffer()
+      await env.FILES.put(assetKey, bytes, {
+        httpMetadata: {
+          contentType: file.type || (kind === 'video' ? 'video/mp4' : 'image/jpeg'),
+          cacheControl: 'public, max-age=31536000, immutable',
+        },
+      })
+    } catch {
+      return json({ error: 'storage unavailable' }, 503, origin)
+    }
+
+    return json({ assetKey, kind, size: file.size }, 201, origin)
   }
 
   if (pathname === '/api/track' && request.method === 'POST') {
@@ -307,7 +454,7 @@ async function handleRequest(request, env) {
   }
 
   if (request.method === 'GET') {
-    const key = trackKeyFromPath(pathname)
+    const key = objectKeyFromPath(pathname)
     if (key) {
       const object = await env.FILES.get(key)
       if (!object) return json({ error: 'not found' }, 404, origin)

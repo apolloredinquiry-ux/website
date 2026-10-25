@@ -11,14 +11,21 @@ export default function AdminPanel({
   adminKey: string
   onClose: () => void
 }) {
-  const { settings, save, upload, reset } = useSettings()
+  const { settings, save, upload, uploadImage, uploadBackground, reset } =
+    useSettings()
   const [views, setViews] = useState(settings.views)
   const [location, setLocation] = useState(settings.location)
   const [about, setAbout] = useState(settings.about)
   const [glow, setGlow] = useState(settings.locationGlow)
+  const [caption, setCaption] = useState(settings.imageCaption)
+  const [radius, setRadius] = useState(settings.imageRadius)
+  const [imageGlow, setImageGlow] = useState(settings.imageGlow)
+  const [fit, setFit] = useState<'cover' | 'contain'>(settings.imageFit)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
-  const [busy, setBusy] = useState<'save' | 'upload' | 'reset' | null>(null)
+  const [busy, setBusy] = useState<
+    'save' | 'upload' | 'image' | 'background' | 'reset' | null
+  >(null)
 
   useEffect(() => {
     const previous = document.body.style.overflow
@@ -52,6 +59,10 @@ export default function AdminPanel({
           location: location.trim(),
           locationGlow: glow,
           about: about.trim(),
+          imageCaption: caption.trim(),
+          imageRadius: radius,
+          imageGlow,
+          imageFit: fit,
         },
         adminKey,
       )
@@ -92,6 +103,93 @@ export default function AdminPanel({
     }
   }
 
+  const handleImageFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    if (
+      !file.type.startsWith('image/') &&
+      !/\.(jpe?g|png|webp|gif|avif)$/i.test(file.name)
+    ) {
+      setError('choose an image file')
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('image must be under 10 MB')
+      return
+    }
+
+    setError('')
+    setBusy('image')
+    try {
+      await uploadImage(file, adminKey)
+      setSaved(true)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'could not upload')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const handleBackgroundFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    const isVideo = file.type.startsWith('video/')
+    const isImage = file.type.startsWith('image/')
+    if (
+      !isVideo &&
+      !isImage &&
+      !/\.(jpe?g|png|webp|gif|avif|mp4|webm|mov|m4v)$/i.test(file.name)
+    ) {
+      setError('choose an image or video file')
+      return
+    }
+    if (file.size > (isVideo ? 25 : 10) * 1024 * 1024) {
+      setError(isVideo ? 'video must be under 25 MB' : 'image must be under 10 MB')
+      return
+    }
+
+    setError('')
+    setBusy('background')
+    try {
+      await uploadBackground(file, adminKey)
+      setSaved(true)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'could not upload')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const removeImage = async () => {
+    setBusy('image')
+    setError('')
+    try {
+      await save({ imageKey: null }, adminKey)
+      setSaved(true)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'could not remove')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const removeBackground = async () => {
+    setBusy('background')
+    setError('')
+    try {
+      await save({ backgroundKey: null, backgroundKind: null }, adminKey)
+      setSaved(true)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'could not remove')
+    } finally {
+      setBusy(null)
+    }
+  }
+
   const handleReset = async () => {
     setBusy('reset')
     setError('')
@@ -101,6 +199,10 @@ export default function AdminPanel({
       setLocation(defaultSettings.location)
       setAbout(defaultSettings.about)
       setGlow(defaultSettings.locationGlow)
+      setCaption(defaultSettings.imageCaption)
+      setRadius(defaultSettings.imageRadius)
+      setImageGlow(defaultSettings.imageGlow)
+      setFit(defaultSettings.imageFit)
       setSaved(true)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'could not reset')
@@ -214,6 +316,146 @@ export default function AdminPanel({
                 />
               </label>
             </div>
+          </div>
+
+          <div className="admin-divider" />
+
+          <div className="admin-group">
+            <span className="admin-group-title">Image box</span>
+
+            <div className="admin-song">
+              <span className="admin-song-name">
+                {settings.imageKey ? 'Custom image' : 'No image set'}
+              </span>
+              <label
+                className={`admin-upload ${busy === 'image' ? 'is-busy' : ''}`}
+              >
+                {busy === 'image' ? 'Uploading…' : 'Upload'}
+                <input
+                  type="file"
+                  accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.avif"
+                  onChange={handleImageFile}
+                  disabled={busy !== null}
+                />
+              </label>
+            </div>
+            {settings.imageKey && (
+              <button
+                className="admin-link"
+                type="button"
+                disabled={busy !== null}
+                onClick={() => void removeImage()}
+              >
+                Remove image
+              </button>
+            )}
+
+            <label className="admin-field">
+              <span className="admin-label">Caption</span>
+              <input
+                className="admin-input"
+                value={caption}
+                maxLength={140}
+                spellCheck={false}
+                placeholder="optional caption"
+                onChange={(event) => setCaption(event.target.value)}
+              />
+            </label>
+
+            <label className="admin-field">
+              <span className="admin-label">
+                Corners <span className="admin-value">{radius}px</span>
+              </span>
+              <input
+                className="admin-range"
+                type="range"
+                min={0}
+                max={64}
+                step={2}
+                value={radius}
+                onChange={(event) => setRadius(Number(event.target.value))}
+              />
+            </label>
+
+            <div className="admin-switch-row">
+              <div className="admin-switch-copy">
+                <span className="admin-label">Image glow</span>
+                <span className="admin-hint">White halo around the frame</span>
+              </div>
+              <button
+                className={`admin-switch ${imageGlow ? 'is-on' : ''}`}
+                type="button"
+                role="switch"
+                aria-checked={imageGlow}
+                aria-label="Image glow"
+                onClick={() => setImageGlow((value) => !value)}
+              >
+                <span />
+              </button>
+            </div>
+
+            <div className="admin-field">
+              <span className="admin-label">Fit</span>
+              <div className="admin-segment" role="group" aria-label="Image fit">
+                <button
+                  className={`admin-segment-item ${fit === 'cover' ? 'is-on' : ''}`}
+                  type="button"
+                  aria-pressed={fit === 'cover'}
+                  onClick={() => setFit('cover')}
+                >
+                  Cover
+                </button>
+                <button
+                  className={`admin-segment-item ${fit === 'contain' ? 'is-on' : ''}`}
+                  type="button"
+                  aria-pressed={fit === 'contain'}
+                  onClick={() => setFit('contain')}
+                >
+                  Contain
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="admin-divider" />
+
+          <div className="admin-group">
+            <span className="admin-group-title">Page background</span>
+
+            <div className="admin-song">
+              <span className="admin-song-name">
+                {settings.backgroundKey
+                  ? `Custom ${settings.backgroundKind}`
+                  : 'No background set'}
+              </span>
+              <label
+                className={`admin-upload ${
+                  busy === 'background' ? 'is-busy' : ''
+                }`}
+              >
+                {busy === 'background' ? 'Uploading…' : 'Upload'}
+                <input
+                  type="file"
+                  accept="image/*,video/*,.mp4,.webm,.mov,.m4v"
+                  onChange={handleBackgroundFile}
+                  disabled={busy !== null}
+                />
+              </label>
+            </div>
+            {settings.backgroundKey && (
+              <button
+                className="admin-link"
+                type="button"
+                disabled={busy !== null}
+                onClick={() => void removeBackground()}
+              >
+                Remove background
+              </button>
+            )}
+            <span className="admin-hint">
+              Image up to 10 MB or video up to 25 MB. Fills the page behind the
+              cards.
+            </span>
           </div>
 
           {error && <p className="admin-error">{error}</p>}

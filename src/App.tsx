@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { FaArrowUp } from 'react-icons/fa'
 import About from './components/About'
+import Background from './components/Background'
+import GalleryImage from './components/GalleryImage'
 import Hero from './components/Hero'
-import MusicPlayer from './components/MusicPlayer'
 import { useDisplayName } from './useDiscordPresence'
 
 export default function App() {
@@ -48,12 +49,14 @@ export default function App() {
 
   return (
     <>
+      <Background />
+
       <main>
         <Hero />
         <About />
 
-        <div className="music-panel" id="music">
-          <MusicPlayer />
+        <div className="media-panel" id="gallery">
+          <GalleryImage />
 
           <footer className="site-footer">
             <span className="footer-mark">

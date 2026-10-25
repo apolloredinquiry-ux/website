@@ -8,6 +8,7 @@ import {
   useDisplayName,
   type LanyardPresence,
 } from '../useDiscordPresence'
+import MusicPlayer from './MusicPlayer'
 import Reveal from './Reveal'
 
 const timeFormatter = new Intl.DateTimeFormat('en-GB', {
@@ -150,6 +151,8 @@ export default function About() {
           ))}
         </div>
       </Reveal>
+
+      <MusicPlayer />
 
       <Reveal delay={110}>
         <div className="about-grid">

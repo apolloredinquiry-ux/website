@@ -51,8 +51,10 @@ export default function Hero() {
     const x = (event.clientX - rect.left) / rect.width
     const y = (event.clientY - rect.top) / rect.height
 
-    card.style.setProperty('--rx', `${((0.5 - y) * 11).toFixed(2)}deg`)
-    card.style.setProperty('--ry', `${((x - 0.5) * 13).toFixed(2)}deg`)
+    card.style.setProperty('--rx', `${((0.5 - y) * 17).toFixed(2)}deg`)
+    card.style.setProperty('--ry', `${((x - 0.5) * 19).toFixed(2)}deg`)
+    card.style.setProperty('--sx', `${((x - 0.5) * -26).toFixed(1)}px`)
+    card.style.setProperty('--sy', `${((y - 0.5) * -22 + 18).toFixed(1)}px`)
     card.style.setProperty('--mx', `${(x * 100).toFixed(1)}%`)
     card.style.setProperty('--my', `${(y * 100).toFixed(1)}%`)
   }
@@ -62,6 +64,8 @@ export default function Hero() {
     if (!card) return
     card.style.setProperty('--rx', '0deg')
     card.style.setProperty('--ry', '0deg')
+    card.style.setProperty('--sx', '0px')
+    card.style.setProperty('--sy', '18px')
     card.style.setProperty('--mx', '50%')
     card.style.setProperty('--my', '40%')
   }

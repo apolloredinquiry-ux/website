@@ -150,7 +150,7 @@ export default function MusicPlayer() {
   }
 
   return (
-    <section className="music-section" aria-label="Music">
+    <section className="music-section" id="music" aria-label="Music">
       <Reveal>
         <div className="music-card">
           <div className="music-head">

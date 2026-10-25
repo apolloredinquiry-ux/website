@@ -11,7 +11,9 @@ import {
   fetchProfile,
   saveProfile,
   trackUrl,
+  uploadAsset,
   uploadTrack,
+  type AssetKind,
   type RemoteProfile,
 } from './api'
 import { profile, track } from './data'
@@ -26,6 +28,13 @@ export type Settings = {
   trackTitle: string
   trackArtist: string
   customTrack: boolean
+  imageKey: string | null
+  imageCaption: string
+  imageRadius: number
+  imageGlow: boolean
+  imageFit: 'cover' | 'contain'
+  backgroundKey: string | null
+  backgroundKind: AssetKind | null
 }
 
 type SettingsContextValue = {
@@ -33,6 +42,8 @@ type SettingsContextValue = {
   loading: boolean
   save: (patch: Partial<Settings>, key: string) => Promise<void>
   upload: (file: File, key: string) => Promise<void>
+  uploadImage: (file: File, key: string) => Promise<void>
+  uploadBackground: (file: File, key: string) => Promise<void>
   reset: (key: string) => Promise<void>
 }
 
@@ -48,6 +59,13 @@ export const defaultSettings: Settings = {
   trackTitle: track.title,
   trackArtist: track.artist,
   customTrack: false,
+  imageKey: null,
+  imageCaption: '',
+  imageRadius: 32,
+  imageGlow: false,
+  imageFit: 'cover',
+  backgroundKey: null,
+  backgroundKind: null,
 }
 
 function fromRemote(remote: RemoteProfile): Settings {
@@ -61,6 +79,17 @@ function fromRemote(remote: RemoteProfile): Settings {
     trackTitle: remote.trackTitle || track.title,
     trackArtist: remote.trackArtist || track.artist,
     customTrack: remote.customTrack,
+    imageKey: remote.imageKey ?? null,
+    imageCaption: remote.imageCaption ?? '',
+    imageRadius: remote.imageRadius ?? 32,
+    imageGlow: remote.imageGlow ?? false,
+    imageFit: remote.imageFit === 'contain' ? 'contain' : 'cover',
+    backgroundKey: remote.backgroundKey ?? null,
+    backgroundKind: remote.backgroundKey
+      ? remote.backgroundKind === 'video'
+        ? 'video'
+        : 'image'
+      : null,
   }
 }
 
@@ -74,6 +103,13 @@ function toRemote(settings: Settings): RemoteProfile {
     trackTitle: settings.trackTitle,
     trackArtist: settings.trackArtist,
     customTrack: settings.customTrack,
+    imageKey: settings.imageKey,
+    imageCaption: settings.imageCaption,
+    imageRadius: settings.imageRadius,
+    imageGlow: settings.imageGlow,
+    imageFit: settings.imageFit,
+    backgroundKey: settings.backgroundKey,
+    backgroundKind: settings.backgroundKind,
   }
 }
 
@@ -178,6 +214,36 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     [settings],
   )
 
+  const uploadImage = useCallback(
+    async (file: File, key: string) => {
+      const asset = await uploadAsset(file, key)
+      const saved = await saveProfile(
+        toRemote({ ...settings, imageKey: asset.assetKey }),
+        key,
+      )
+      setSettings(fromRemote(saved))
+      writeCache(saved)
+    },
+    [settings],
+  )
+
+  const uploadBackground = useCallback(
+    async (file: File, key: string) => {
+      const asset = await uploadAsset(file, key)
+      const saved = await saveProfile(
+        toRemote({
+          ...settings,
+          backgroundKey: asset.assetKey,
+          backgroundKind: asset.kind,
+        }),
+        key,
+      )
+      setSettings(fromRemote(saved))
+      writeCache(saved)
+    },
+    [settings],
+  )
+
   const reset = useCallback(async (key: string) => {
     const saved = await saveProfile(toRemote(defaultSettings), key)
     setSettings(fromRemote(saved))
@@ -185,8 +251,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo(
-    () => ({ settings, loading, save, upload, reset }),
-    [settings, loading, save, upload, reset],
+    () => ({ settings, loading, save, upload, uploadImage, uploadBackground, reset }),
+    [settings, loading, save, upload, uploadImage, uploadBackground, reset],
   )
 
   return (

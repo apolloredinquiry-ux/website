@@ -1,6 +1,8 @@
 export const API_BASE =
   'https://site-257c6e06c7b74a449ec9935688df3722.freebuff.page'
 
+export type AssetKind = 'image' | 'video'
+
 export type RemoteProfile = {
   views: string
   location: string
@@ -10,10 +12,21 @@ export type RemoteProfile = {
   trackTitle: string
   trackArtist: string
   customTrack: boolean
+  imageKey?: string | null
+  imageCaption?: string
+  imageRadius?: number
+  imageGlow?: boolean
+  imageFit?: 'cover' | 'contain'
+  backgroundKey?: string | null
+  backgroundKind?: AssetKind | null
 }
 
 export function trackUrl(key: string) {
   return `${API_BASE}/api/track/${key}`
+}
+
+export function assetUrl(key: string) {
+  return `${API_BASE}/api/asset/${key}`
 }
 
 async function readError(response: Response) {
@@ -58,6 +71,27 @@ export async function saveProfile(
   if (!response.ok) throw new Error(await readError(response))
   const payload = (await response.json()) as { profile: RemoteProfile }
   return payload.profile
+}
+
+export async function uploadAsset(
+  file: File,
+  key: string,
+): Promise<{ assetKey: string; kind: AssetKind }> {
+  const form = new FormData()
+  form.append('file', file)
+
+  const response = await fetch(`${API_BASE}/api/asset`, {
+    method: 'POST',
+    headers: { 'x-admin-key': key },
+    body: form,
+  })
+  if (response.status === 401) throw new Error('key rejected')
+  if (!response.ok) throw new Error(await readError(response))
+  const payload = (await response.json()) as {
+    assetKey: string
+    kind: AssetKind
+  }
+  return payload
 }
 
 export async function uploadTrack(file: File, key: string): Promise<string> {
