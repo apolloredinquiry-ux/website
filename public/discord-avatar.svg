@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#182530"/>
+      <stop offset="0.55" stop-color="#1c1a2c"/>
+      <stop offset="1" stop-color="#0b0c10"/>
+    </linearGradient>
+    <radialGradient id="rim" cx="0.5" cy="0.2" r="0.8">
+      <stop offset="0" stop-color="#8fc7d8" stop-opacity="0.4"/>
+      <stop offset="0.6" stop-color="#8fc7d8" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur"><feGaussianBlur stdDeviation="12"/></filter>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.12"/></feComponentTransfer>
+      <feBlend in="SourceGraphic" mode="overlay"/>
+    </filter>
+  </defs>
+  <rect width="200" height="200" fill="url(#bg)"/>
+  <circle cx="100" cy="60" r="88" fill="url(#rim)" filter="url(#blur)"/>
+  <g fill="#070a0d">
+    <circle cx="100" cy="84" r="32"/>
+    <path d="M38 200c4-41 26-66 62-66s58 25 62 66z"/>
+  </g>
+  <path d="M100 58c20 0 32 14 32 32 0 6-2 11-5 16 8-3 14-9 17-18 2 20-9 38-30 44-18 5-38-5-45-23-5-14-1-30 9-41 5-6 13-10 22-10z" fill="#9fc6d4" opacity="0.18"/>
+</svg>
