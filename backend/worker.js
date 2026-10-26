@@ -23,6 +23,7 @@ const MAX_BODY_BYTES = 32 * 1024
 const AUDIO_EXTENSIONS = new Set(['mp3', 'wav', 'ogg', 'oga', 'm4a', 'aac', 'flac'])
 const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'])
 const VIDEO_EXTENSIONS = new Set(['mp4', 'webm', 'mov', 'm4v'])
+const DEFAULT_DISCORD = 'https://discord.gg/lurkin'
 const TRACK_KEY = /^tracks\/[a-zA-Z0-9-]+\.[a-z0-9]{2,5}$/
 const ASSET_KEY = /^assets\/[a-zA-Z0-9-]+\.[a-z0-9]{2,5}$/
 
@@ -95,6 +96,19 @@ function text(value, max) {
   return typeof value === 'string' ? value.slice(0, max) : null
 }
 
+function link(value, max = 300) {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim().slice(0, max)
+  if (!trimmed) return null
+  try {
+    const url = new URL(trimmed)
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return null
+    return url.toString()
+  } catch {
+    return null
+  }
+}
+
 function parseKey(value, pattern) {
   if (value === null) return null
   if (typeof value !== 'string') return undefined
@@ -112,6 +126,14 @@ function sanitizeProfile(input, previous) {
   const views = text(input.views, 32)
   const location = text(input.location, 80)
   const about = text(input.about, 1200)
+  // Older clients omit the Discord link; keep the stored one instead of resetting it.
+  const discordValue =
+    input.discord === undefined ? base.discord : input.discord
+  const discord = link(
+    typeof discordValue === 'string' ? discordValue : DEFAULT_DISCORD,
+  )
+  if (discord === null) return null
+
   const trackTitle = text(input.trackTitle, 120)
   const trackArtist = text(input.trackArtist, 120)
   // Older clients do not send the newer fields; keep what is already stored.
@@ -172,6 +194,7 @@ function sanitizeProfile(input, previous) {
     views,
     location,
     locationGlow: input.locationGlow,
+    discord,
     about,
     trackKey,
     trackTitle: trackTitle ?? '',

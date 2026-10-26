@@ -22,7 +22,7 @@ export type Track = {
 
 export const profile = {
   fallbackName: 'apollo',
-  status: 'https://discord.gg/lurkin',
+  discord: 'https://discord.gg/lurkin',
   views: '81,149',
   location: 'Paris, France',
 }
@@ -46,7 +46,7 @@ export const badges: Badge[] = [
 ]
 
 export const socials: Social[] = [
-  { label: 'Discord', href: 'https://discord.gg/lurkin', Icon: FaDiscord },
+  { label: 'Discord', href: profile.discord, Icon: FaDiscord },
   { label: 'Email', href: 'mailto:apollo@apollo.ceo', Icon: FaEnvelope },
 ]
 

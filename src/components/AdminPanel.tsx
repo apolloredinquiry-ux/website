@@ -4,6 +4,21 @@ import { defaultSettings, useSettings } from '../settings'
 
 const MAX_FILE_BYTES = 25 * 1024 * 1024
 
+function normalizeLink(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`
+  try {
+    const url = new URL(withScheme)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return ''
+    return url.toString()
+  } catch {
+    return ''
+  }
+}
+
 export default function AdminPanel({
   adminKey,
   onClose,
@@ -15,6 +30,7 @@ export default function AdminPanel({
     useSettings()
   const [views, setViews] = useState(settings.views)
   const [location, setLocation] = useState(settings.location)
+  const [discord, setDiscord] = useState(settings.discord)
   const [about, setAbout] = useState(settings.about)
   const [glow, setGlow] = useState(settings.locationGlow)
   const [caption, setCaption] = useState(settings.imageCaption)
@@ -50,6 +66,12 @@ export default function AdminPanel({
   }, [saved])
 
   const handleSave = async () => {
+    const discordLink = normalizeLink(discord)
+    if (!discordLink) {
+      setError('enter a valid link, e.g. https://discord.gg/lurkin')
+      return
+    }
+
     setBusy('save')
     setError('')
     try {
@@ -58,6 +80,7 @@ export default function AdminPanel({
           views: views.trim() || '0',
           location: location.trim(),
           locationGlow: glow,
+          discord: discordLink,
           about: about.trim(),
           imageCaption: caption.trim(),
           imageRadius: radius,
@@ -197,6 +220,7 @@ export default function AdminPanel({
       await reset(adminKey)
       setViews(defaultSettings.views)
       setLocation(defaultSettings.location)
+      setDiscord(defaultSettings.discord)
       setAbout(defaultSettings.about)
       setGlow(defaultSettings.locationGlow)
       setCaption(defaultSettings.imageCaption)
@@ -266,6 +290,22 @@ export default function AdminPanel({
               spellCheck={false}
               onChange={(event) => setLocation(event.target.value)}
             />
+          </label>
+
+          <label className="admin-field">
+            <span className="admin-label">Discord link</span>
+            <input
+              className="admin-input"
+              value={discord}
+              type="text"
+              inputMode="url"
+              spellCheck={false}
+              placeholder="https://discord.gg/lurkin"
+              onChange={(event) => setDiscord(event.target.value)}
+            />
+            <span className="admin-hint">
+              Used by the link under your name and the Discord icon
+            </span>
           </label>
 
           <div className="admin-switch-row">

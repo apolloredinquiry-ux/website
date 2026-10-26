@@ -22,6 +22,7 @@ export type Settings = {
   views: string
   location: string
   locationGlow: boolean
+  discord: string
   about: string
   trackKey: string | null
   trackSrc: string
@@ -53,6 +54,7 @@ export const defaultSettings: Settings = {
   views: profile.views,
   location: profile.location,
   locationGlow: false,
+  discord: profile.discord,
   about: "i stay with the 5's",
   trackKey: null,
   trackSrc: track.src,
@@ -73,6 +75,10 @@ function fromRemote(remote: RemoteProfile): Settings {
     views: remote.views,
     location: remote.location,
     locationGlow: remote.locationGlow,
+    discord:
+      typeof remote.discord === 'string' && remote.discord
+        ? remote.discord
+        : profile.discord,
     about: remote.about,
     trackKey: remote.trackKey,
     trackSrc: remote.trackKey ? trackUrl(remote.trackKey) : track.src,
@@ -98,6 +104,7 @@ function toRemote(settings: Settings): RemoteProfile {
     views: settings.views,
     location: settings.location,
     locationGlow: settings.locationGlow,
+    discord: settings.discord,
     about: settings.about,
     trackKey: settings.trackKey,
     trackTitle: settings.trackTitle,
