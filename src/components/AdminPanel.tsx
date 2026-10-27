@@ -304,7 +304,7 @@ export default function AdminPanel({
               onChange={(event) => setDiscord(event.target.value)}
             />
             <span className="admin-hint">
-              Used by the link under your name and the Discord icon
+              Used by the Discord card in the About section
             </span>
           </label>
 

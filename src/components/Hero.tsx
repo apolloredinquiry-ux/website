@@ -20,9 +20,6 @@ export default function Hero() {
   const presence = useDiscordPresence()
   const avatar = avatarUrl(presence)
   const { settings } = useSettings()
-  const links = socials.map((social) =>
-    social.label === 'Discord' ? { ...social, href: settings.discord } : social,
-  )
   const [adminOpen, setAdminOpen] = useState(false)
   const taps = useRef(0)
 
@@ -103,20 +100,8 @@ export default function Hero() {
           ))}
         </ul>
 
-        <a
-          className="hero-status"
-          href={settings.discord}
-          target="_blank"
-          rel="noreferrer"
-        >
-          {settings.discord.replace(/^https?:\/\//, '')}
-          <span className="status-caret" aria-hidden="true">
-            |
-          </span>
-        </a>
-
         <nav className="socials" aria-label="Social links">
-          {links.map(({ label, href, Icon }) => (
+          {socials.map(({ label, href, Icon }) => (
             <a
               key={label}
               className="social-link"

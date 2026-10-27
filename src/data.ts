@@ -1,5 +1,5 @@
 import type { IconType } from 'react-icons'
-import { FaDiscord, FaEnvelope } from 'react-icons/fa'
+import { FaEnvelope } from 'react-icons/fa'
 
 export type Badge = {
   label: string
@@ -46,7 +46,6 @@ export const badges: Badge[] = [
 ]
 
 export const socials: Social[] = [
-  { label: 'Discord', href: profile.discord, Icon: FaDiscord },
   { label: 'Email', href: 'mailto:apollo@apollo.ceo', Icon: FaEnvelope },
 ]
 

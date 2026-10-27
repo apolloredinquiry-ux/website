@@ -156,7 +156,12 @@ export default function About() {
 
       <Reveal delay={110}>
         <div className="about-grid">
-          <div className="discord-card">
+          <a
+            className="discord-card"
+            href={settings.discord}
+            target="_blank"
+            rel="noreferrer"
+          >
             <div className="discord-avatar-wrap">
               <img
                 className="discord-avatar"
@@ -180,7 +185,7 @@ export default function About() {
                 </span>
               </span>
             </div>
-          </div>
+          </a>
 
           <div className="tz-card">
             <span className="tz-label">
