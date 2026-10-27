@@ -21,7 +21,7 @@ export type LanyardPresence = {
   }
   discord_status: 'online' | 'idle' | 'dnd' | 'offline'
   activities: LanyardActivity[]
-  spotify: { song: string; artist: string } | null
+  spotify: { song: string; artist: string; track_id?: string } | null
 }
 
 let cached: LanyardPresence | null = null
