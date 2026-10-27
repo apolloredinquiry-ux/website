@@ -19,15 +19,6 @@ function normalizeLink(value: string) {
   }
 }
 
-function normalizePlaylist(value: string) {
-  const trimmed = value.trim()
-  if (!trimmed) return ''
-  const match = /^(?:(?:https?:\/\/)?open\.spotify\.com\/playlist\/|spotify:playlist:)([A-Za-z0-9]{22})/i.exec(
-    trimmed,
-  )
-  return match ? `https://open.spotify.com/playlist/${match[1]}` : null
-}
-
 export default function AdminPanel({
   adminKey,
   onClose,
@@ -41,7 +32,6 @@ export default function AdminPanel({
   const [location, setLocation] = useState(settings.location)
   const [discord, setDiscord] = useState(settings.discord)
   const [about, setAbout] = useState(settings.about)
-  const [playlist, setPlaylist] = useState(settings.playlistUrl ?? '')
   const [glow, setGlow] = useState(settings.locationGlow)
   const [caption, setCaption] = useState(settings.imageCaption)
   const [radius, setRadius] = useState(settings.imageRadius)
@@ -81,11 +71,6 @@ export default function AdminPanel({
       setError('enter a valid link, e.g. https://discord.gg/lurkin')
       return
     }
-    const playlistLink = normalizePlaylist(playlist)
-    if (playlistLink === null) {
-      setError('enter a Spotify playlist link, e.g. https://open.spotify.com/playlist/…')
-      return
-    }
 
     setBusy('save')
     setError('')
@@ -97,7 +82,6 @@ export default function AdminPanel({
           locationGlow: glow,
           discord: discordLink,
           about: about.trim(),
-          playlistUrl: playlistLink || null,
           imageCaption: caption.trim(),
           imageRadius: radius,
           imageGlow,
@@ -134,7 +118,6 @@ export default function AdminPanel({
     setBusy('upload')
     try {
       await upload(file, adminKey)
-      setPlaylist('')
       setSaved(true)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'could not upload')
@@ -239,7 +222,6 @@ export default function AdminPanel({
       setLocation(defaultSettings.location)
       setDiscord(defaultSettings.discord)
       setAbout(defaultSettings.about)
-      setPlaylist('')
       setGlow(defaultSettings.locationGlow)
       setCaption(defaultSettings.imageCaption)
       setRadius(defaultSettings.imageRadius)
@@ -374,14 +356,6 @@ export default function AdminPanel({
                 />
               </label>
             </div>
-            <input
-              className="admin-input"
-              type="url"
-              placeholder="Spotify playlist link"
-              value={playlist}
-              spellCheck={false}
-              onChange={(event) => setPlaylist(event.target.value)}
-            />
           </div>
 
           <div className="admin-divider" />

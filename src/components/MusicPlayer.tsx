@@ -24,37 +24,6 @@ function formatTime(seconds: number) {
 
 export default function MusicPlayer() {
   const { settings } = useSettings()
-  if (settings.playlistUrl) {
-    return <SpotifyPlaylist url={settings.playlistUrl} />
-  }
-  return <AudioPlayer />
-}
-
-function SpotifyPlaylist({ url }: { url: string }) {
-  const embedUrl = url.replace(
-    'open.spotify.com/playlist/',
-    'open.spotify.com/embed/playlist/',
-  )
-  return (
-    <section className="music-section" id="music" aria-label="Music">
-      <Reveal>
-        <iframe
-          className="spotify-embed"
-          src={embedUrl}
-          title="Spotify playlist"
-          width="100%"
-          height="352"
-          frameBorder="0"
-          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-          loading="lazy"
-        />
-      </Reveal>
-    </section>
-  )
-}
-
-function AudioPlayer() {
-  const { settings } = useSettings()
   const audioRef = useRef<HTMLAudioElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [position, setPosition] = useState(0)

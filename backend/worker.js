@@ -119,16 +119,6 @@ function keptKey(value, pattern) {
   return typeof value === 'string' && pattern.test(value) ? value : null
 }
 
-// Returns the canonical Spotify playlist URL, null to clear, or undefined when invalid.
-function playlistLink(value) {
-  if (value === null || value === '') return null
-  if (typeof value !== 'string') return undefined
-  const match = /^(?:https:\/\/open\.spotify\.com\/playlist\/|spotify:playlist:)([A-Za-z0-9]{22})/.exec(
-    value.trim(),
-  )
-  return match ? `https://open.spotify.com/playlist/${match[1]}` : undefined
-}
-
 function sanitizeProfile(input, previous) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return null
   const base = previous && typeof previous === 'object' ? previous : {}
@@ -152,17 +142,10 @@ function sanitizeProfile(input, previous) {
       ? keptKey(base.trackKey, TRACK_KEY)
       : parseKey(input.trackKey, TRACK_KEY)
 
-  // Older clients do not send the playlist; keep what is already stored.
-  const playlistUrl =
-    input.playlistUrl === undefined
-      ? playlistLink(base.playlistUrl) ?? null
-      : playlistLink(input.playlistUrl)
-
   if (views === null || location === null || about === null) return null
   if (typeof input.locationGlow !== 'boolean') return null
   if (typeof input.customTrack !== 'boolean') return null
   if (trackKey === undefined) return null
-  if (playlistUrl === undefined) return null
 
   const imageKey =
     input.imageKey === undefined
@@ -217,7 +200,6 @@ function sanitizeProfile(input, previous) {
     trackTitle: trackTitle ?? '',
     trackArtist: trackArtist ?? '',
     customTrack: input.customTrack && trackKey !== null,
-    playlistUrl,
     imageKey,
     imageCaption,
     imageRadius,

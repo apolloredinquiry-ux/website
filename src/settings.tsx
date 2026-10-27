@@ -29,7 +29,6 @@ export type Settings = {
   trackTitle: string
   trackArtist: string
   customTrack: boolean
-  playlistUrl: string | null
   imageKey: string | null
   imageCaption: string
   imageRadius: number
@@ -62,7 +61,6 @@ export const defaultSettings: Settings = {
   trackTitle: track.title,
   trackArtist: track.artist,
   customTrack: false,
-  playlistUrl: null,
   imageKey: null,
   imageCaption: '',
   imageRadius: 32,
@@ -87,7 +85,6 @@ function fromRemote(remote: RemoteProfile): Settings {
     trackTitle: remote.trackTitle || track.title,
     trackArtist: remote.trackArtist || track.artist,
     customTrack: remote.customTrack,
-    playlistUrl: remote.playlistUrl ?? null,
     imageKey: remote.imageKey ?? null,
     imageCaption: remote.imageCaption ?? '',
     imageRadius: remote.imageRadius ?? 32,
@@ -113,7 +110,6 @@ function toRemote(settings: Settings): RemoteProfile {
     trackTitle: settings.trackTitle,
     trackArtist: settings.trackArtist,
     customTrack: settings.customTrack,
-    playlistUrl: settings.playlistUrl,
     imageKey: settings.imageKey,
     imageCaption: settings.imageCaption,
     imageRadius: settings.imageRadius,
@@ -216,7 +212,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           trackTitle: title,
           trackArtist: 'custom upload',
           customTrack: true,
-          playlistUrl: null,
         }),
         key,
       )
