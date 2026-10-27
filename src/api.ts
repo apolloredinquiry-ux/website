@@ -13,6 +13,7 @@ export type RemoteProfile = {
   trackTitle: string
   trackArtist: string
   customTrack: boolean
+  playlistUrl?: string | null
   imageKey?: string | null
   imageCaption?: string
   imageRadius?: number
