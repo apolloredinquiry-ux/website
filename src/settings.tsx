@@ -43,9 +43,13 @@ export type Settings = {
   backgroundKind: AssetKind | null
 }
 
+type NowPlaying = { title: string; artist: string; src: string } | null
+
 type SettingsContextValue = {
   settings: Settings
   loading: boolean
+  nowPlaying: NowPlaying
+  setNowPlaying: (value: NowPlaying) => void
   save: (patch: Partial<Settings>, key: string) => Promise<void>
   upload: (file: File, key: string) => Promise<void>
   uploadImage: (file: File, key: string) => Promise<void>
@@ -175,6 +179,7 @@ const SettingsContext = createContext<SettingsContextValue | null>(null)
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(readCache)
   const [loading, setLoading] = useState(true)
+  const [nowPlaying, setNowPlaying] = useState<NowPlaying>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -331,6 +336,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     () => ({
       settings,
       loading,
+      nowPlaying,
+      setNowPlaying,
       save,
       upload,
       uploadImage,
@@ -340,7 +347,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       removeRandomTrack,
       reset,
     }),
-    [settings, loading, save, upload, uploadImage, uploadAvatar, uploadBackground, uploadRandomTrack, removeRandomTrack, reset],
+    [settings, loading, nowPlaying, save, upload, uploadImage, uploadAvatar, uploadBackground, uploadRandomTrack, removeRandomTrack, reset],
   )
 
   return (

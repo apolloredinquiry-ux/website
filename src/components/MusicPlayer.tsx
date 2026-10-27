@@ -118,7 +118,9 @@ function SpotifyEmbed({ src }: { src: string }) {
 }
 
 function AudioPlayer() {
-  const { settings } = useSettings()
+  const { settings, nowPlaying } = useSettings()
+  const title = nowPlaying?.title ?? settings.trackTitle
+  const artist = nowPlaying?.artist ?? settings.trackArtist
   const audioRef = useRef<HTMLAudioElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [position, setPosition] = useState(0)
@@ -254,8 +256,8 @@ function AudioPlayer() {
             </span>
 
             <div className="music-meta">
-              <span className="music-title">{settings.trackTitle}</span>
-              <span className="music-artist">{settings.trackArtist}</span>
+              <span className="music-title">{title}</span>
+              <span className="music-artist">{artist}</span>
             </div>
 
             <div className="music-controls">

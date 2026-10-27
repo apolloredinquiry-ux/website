@@ -12,7 +12,7 @@ import { trackUrl } from './api'
 
 export default function App() {
   const [entered, setEntered] = useState(false)
-  const { settings } = useSettings()
+  const { settings, setNowPlaying } = useSettings()
   const presence = useDiscordPresence()
   const name = settings.displayName || presenceName(presence) || profile.fallbackName
 
@@ -41,7 +41,9 @@ export default function App() {
       const list = settings.randomTracks
       if (list.length > 0) {
         const pick = list[Math.floor(Math.random() * list.length)]
-        audio.src = trackUrl(pick.key)
+        const src = trackUrl(pick.key)
+        audio.src = src
+        setNowPlaying({ title: pick.title, artist: 'random pick', src })
       }
       audio.currentTime = 0
       void audio.play().catch(() => {})
