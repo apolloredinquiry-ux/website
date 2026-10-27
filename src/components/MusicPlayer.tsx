@@ -8,14 +8,53 @@ import {
 } from 'react'
 import {
   FaBackward,
+  FaDiscord,
   FaForward,
   FaMusic,
   FaPause,
   FaPlay,
 } from 'react-icons/fa'
 import { useSettings } from '../settings'
-import { useDiscordPresence } from '../useDiscordPresence'
+import {
+  avatarUrl,
+  displayName as presenceName,
+  useDiscordPresence,
+  type LanyardPresence,
+} from '../useDiscordPresence'
 import Reveal from './Reveal'
+
+function activityText(presence: LanyardPresence | null) {
+  if (!presence) return 'apollo.ceo'
+  const activity = presence.activities.find((item) => item.type !== 4)
+  if (activity) {
+    return activity.details
+      ? `${activity.name} — ${activity.details}`
+      : activity.name
+  }
+  return presence.activities.find((item) => item.type === 4)?.state || ''
+}
+
+function DiscordCard() {
+  const presence = useDiscordPresence()
+  const name = presenceName(presence) || 'apollo'
+  const activity = activityText(presence)
+  return (
+    <div className="discord-card">
+      <div className="discord-avatar-wrap">
+        <img className="discord-avatar" src={avatarUrl(presence)} alt={`${name} avatar`} />
+        <span className="discord-badge" aria-hidden="true">
+          <FaDiscord />
+        </span>
+      </div>
+      <div className="discord-info">
+        <span className="discord-name">{name}</span>
+        <span className="discord-status" title={activity}>
+          <span className="discord-status-text">{activity}</span>
+        </span>
+      </div>
+    </div>
+  )
+}
 
 function formatTime(seconds: number) {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00'
@@ -25,15 +64,30 @@ function formatTime(seconds: number) {
 
 export default function MusicPlayer() {
   const { settings } = useSettings()
-  const presence = useDiscordPresence()
-  const trackId = presence?.spotify?.track_id
-  if (trackId) {
-    return <SpotifyEmbed src={`https://open.spotify.com/embed/track/${trackId}`} />
-  }
   if (settings.playlistUrl) {
-    return <SpotifyPlaylist url={settings.playlistUrl} />
+    return (
+      <>
+        <DiscordSection />
+        <SpotifyPlaylist url={settings.playlistUrl} />
+      </>
+    )
   }
-  return <AudioPlayer />
+  return (
+    <>
+      <DiscordSection />
+      <AudioPlayer />
+    </>
+  )
+}
+
+function DiscordSection() {
+  return (
+    <section className="music-section" aria-label="Discord">
+      <Reveal>
+        <DiscordCard />
+      </Reveal>
+    </section>
+  )
 }
 
 function SpotifyPlaylist({ url }: { url: string }) {
