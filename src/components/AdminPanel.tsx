@@ -42,6 +42,8 @@ export default function AdminPanel({
     uploadImage,
     uploadAvatar,
     uploadBackground,
+    uploadRandomTrack,
+    removeRandomTrack,
     reset,
   } = useSettings()
   const [views, setViews] = useState(settings.views)
@@ -58,7 +60,7 @@ export default function AdminPanel({
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState<
-    'save' | 'upload' | 'image' | 'avatar' | 'background' | 'reset' | null
+    'save' | 'upload' | 'random' | 'image' | 'avatar' | 'background' | 'reset' | null
   >(null)
 
   useEffect(() => {
@@ -147,6 +149,52 @@ export default function AdminPanel({
       setSaved(true)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'could not upload')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const handleRandomFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    if (
+      !file.type.startsWith('audio/') &&
+      !/\.(mp3|wav|ogg|oga|m4a|aac|flac)$/i.test(file.name)
+    ) {
+      setError('choose an audio file')
+      return
+    }
+    if (file.size > MAX_FILE_BYTES) {
+      setError('audio must be under 25 MB')
+      return
+    }
+    if (settings.randomTracks.length >= 30) {
+      setError('the random list is full (30 songs)')
+      return
+    }
+
+    setError('')
+    setBusy('random')
+    try {
+      await uploadRandomTrack(file, adminKey)
+      setSaved(true)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'could not upload')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const handleRemoveRandom = async (trackKey: string) => {
+    setError('')
+    setBusy('random')
+    try {
+      await removeRandomTrack(trackKey, adminKey)
+      setSaved(true)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'could not remove')
     } finally {
       setBusy(null)
     }
@@ -469,6 +517,40 @@ export default function AdminPanel({
                 />
               </label>
             </div>
+            <span className="admin-label">Random songs (click to enter)</span>
+            <div className="admin-song">
+              <span className="admin-song-name">
+                {settings.randomTracks.length
+                  ? `${settings.randomTracks.length} song${settings.randomTracks.length === 1 ? '' : 's'}`
+                  : 'No songs added'}
+              </span>
+              <label
+                className={`admin-upload ${busy === 'random' ? 'is-busy' : ''}`}
+              >
+                {busy === 'random' ? 'Uploading…' : 'Add'}
+                <input
+                  type="file"
+                  accept="audio/*,.mp3,.wav,.ogg,.m4a,.flac"
+                  onChange={handleRandomFile}
+                  disabled={busy !== null}
+                />
+              </label>
+            </div>
+            {settings.randomTracks.map((item) => (
+              <div className="admin-song" key={item.key}>
+                <span className="admin-song-name" title={item.title}>
+                  {item.title}
+                </span>
+                <button
+                  className="admin-upload"
+                  type="button"
+                  onClick={() => void handleRemoveRandom(item.key)}
+                  disabled={busy !== null}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
             <input
               className="admin-input"
               type="url"

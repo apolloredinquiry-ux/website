@@ -3,6 +3,8 @@ export const API_BASE =
 
 export type AssetKind = 'image' | 'video'
 
+export type RandomTrack = { key: string; title: string }
+
 export type RemoteProfile = {
   views: string
   location: string
@@ -16,6 +18,7 @@ export type RemoteProfile = {
   trackArtist: string
   customTrack: boolean
   playlistUrl?: string | null
+  randomTracks?: RandomTrack[]
   imageKey?: string | null
   imageCaption?: string
   imageRadius?: number

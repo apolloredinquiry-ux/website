@@ -14,6 +14,7 @@ import {
   uploadAsset,
   uploadTrack,
   type AssetKind,
+  type RandomTrack,
   type RemoteProfile,
 } from './api'
 import { profile, track } from './data'
@@ -32,6 +33,7 @@ export type Settings = {
   trackArtist: string
   customTrack: boolean
   playlistUrl: string | null
+  randomTracks: RandomTrack[]
   imageKey: string | null
   imageCaption: string
   imageRadius: number
@@ -49,6 +51,8 @@ type SettingsContextValue = {
   uploadImage: (file: File, key: string) => Promise<void>
   uploadAvatar: (file: File, key: string) => Promise<void>
   uploadBackground: (file: File, key: string) => Promise<void>
+  uploadRandomTrack: (file: File, key: string) => Promise<void>
+  removeRandomTrack: (trackKey: string, key: string) => Promise<void>
   reset: (key: string) => Promise<void>
 }
 
@@ -68,6 +72,7 @@ export const defaultSettings: Settings = {
   trackArtist: track.artist,
   customTrack: false,
   playlistUrl: null,
+  randomTracks: [],
   imageKey: null,
   imageCaption: '',
   imageRadius: 32,
@@ -95,6 +100,7 @@ function fromRemote(remote: RemoteProfile): Settings {
     trackArtist: remote.trackArtist || track.artist,
     customTrack: remote.customTrack,
     playlistUrl: remote.playlistUrl ?? null,
+    randomTracks: remote.randomTracks ?? [],
     imageKey: remote.imageKey ?? null,
     imageCaption: remote.imageCaption ?? '',
     imageRadius: remote.imageRadius ?? 32,
@@ -123,6 +129,7 @@ function toRemote(settings: Settings): RemoteProfile {
     trackArtist: settings.trackArtist,
     customTrack: settings.customTrack,
     playlistUrl: settings.playlistUrl,
+    randomTracks: settings.randomTracks,
     imageKey: settings.imageKey,
     imageCaption: settings.imageCaption,
     imageRadius: settings.imageRadius,
@@ -235,6 +242,42 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     [settings],
   )
 
+  const uploadRandomTrack = useCallback(
+    async (file: File, key: string) => {
+      const trackKey = await uploadTrack(file, key)
+      const title =
+        file.name
+          .replace(/\.[^.]+$/, '')
+          .replace(/[-_]+/g, ' ')
+          .trim() || 'track'
+      const saved = await saveProfile(
+        toRemote({
+          ...settings,
+          randomTracks: [...settings.randomTracks, { key: trackKey, title }],
+        }),
+        key,
+      )
+      setSettings(fromRemote(saved))
+      writeCache(saved)
+    },
+    [settings],
+  )
+
+  const removeRandomTrack = useCallback(
+    async (trackKey: string, key: string) => {
+      const saved = await saveProfile(
+        toRemote({
+          ...settings,
+          randomTracks: settings.randomTracks.filter((item) => item.key !== trackKey),
+        }),
+        key,
+      )
+      setSettings(fromRemote(saved))
+      writeCache(saved)
+    },
+    [settings],
+  )
+
   const uploadImage = useCallback(
     async (file: File, key: string) => {
       const asset = await uploadAsset(file, key)
@@ -293,9 +336,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       uploadImage,
       uploadAvatar,
       uploadBackground,
+      uploadRandomTrack,
+      removeRandomTrack,
       reset,
     }),
-    [settings, loading, save, upload, uploadImage, uploadAvatar, uploadBackground, reset],
+    [settings, loading, save, upload, uploadImage, uploadAvatar, uploadBackground, uploadRandomTrack, removeRandomTrack, reset],
   )
 
   return (

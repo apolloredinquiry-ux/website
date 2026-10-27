@@ -119,6 +119,22 @@ function keptKey(value, pattern) {
   return typeof value === 'string' && pattern.test(value) ? value : null
 }
 
+// Random-pick track list: [{ key, title }]. Undefined when the input is invalid.
+function randomTracksList(value) {
+  if (value === undefined || value === null) return []
+  if (!Array.isArray(value) || value.length > 30) return undefined
+  const list = []
+  for (const item of value) {
+    if (!item || typeof item !== 'object') return undefined
+    const key = parseKey(item.key, TRACK_KEY)
+    if (typeof key !== 'string') return undefined
+    const title = text(item.title, 120)
+    if (title === null) return undefined
+    list.push({ key, title })
+  }
+  return list
+}
+
 // Returns the canonical Spotify playlist URL, null to clear, or undefined when invalid.
 function playlistLink(value) {
   if (value === null || value === '') return null
@@ -157,6 +173,11 @@ function sanitizeProfile(input, previous) {
 
   const trackTitle = text(input.trackTitle, 120)
   const trackArtist = text(input.trackArtist, 120)
+  // Older clients do not send the random-pick list; keep what is already stored.
+  const randomTracks =
+    input.randomTracks === undefined
+      ? randomTracksList(base.randomTracks) ?? []
+      : randomTracksList(input.randomTracks)
   // Older clients do not send the newer fields; keep what is already stored.
   const trackKey =
     input.trackKey === undefined
@@ -174,6 +195,7 @@ function sanitizeProfile(input, previous) {
   if (typeof input.locationGlow !== 'boolean') return null
   if (typeof input.customTrack !== 'boolean') return null
   if (trackKey === undefined) return null
+  if (randomTracks === undefined) return null
   if (playlistUrl === undefined) return null
 
   const imageKey =
@@ -231,6 +253,7 @@ function sanitizeProfile(input, previous) {
     trackTitle: trackTitle ?? '',
     trackArtist: trackArtist ?? '',
     customTrack: input.customTrack && trackKey !== null,
+    randomTracks,
     playlistUrl,
     imageKey,
     imageCaption,
@@ -399,15 +422,20 @@ async function handleRequest(request, env) {
 
       // Drop uploads the new profile no longer references.
       const keep = new Set(
-        [profile.trackKey, profile.imageKey, profile.backgroundKey, profile.avatarKey].filter(
-          (key) => typeof key === 'string',
-        ),
+        [
+          profile.trackKey,
+          profile.imageKey,
+          profile.backgroundKey,
+          profile.avatarKey,
+          ...(profile.randomTracks || []).map((track) => track.key),
+        ].filter((key) => typeof key === 'string'),
       )
       const stale = [
         previous && previous.trackKey,
         previous && previous.imageKey,
         previous && previous.backgroundKey,
         previous && previous.avatarKey,
+        ...((previous && previous.randomTracks) || []).map((track) => track.key),
       ].filter((key) => typeof key === 'string' && !keep.has(key))
       await Promise.allSettled(stale.map((key) => env.FILES.delete(key)))
 

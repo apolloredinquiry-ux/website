@@ -8,6 +8,7 @@ import { useSettings } from './settings'
 import { displayName as presenceName, useDiscordPresence } from './useDiscordPresence'
 import useSectionPaging from './useSectionPaging'
 import { profile } from './data'
+import { trackUrl } from './api'
 
 export default function App() {
   const [entered, setEntered] = useState(false)
@@ -37,6 +38,11 @@ export default function App() {
   const enter = () => {
     const audio = document.querySelector<HTMLAudioElement>('audio[data-track]')
     if (audio) {
+      const list = settings.randomTracks
+      if (list.length > 0) {
+        const pick = list[Math.floor(Math.random() * list.length)]
+        audio.src = trackUrl(pick.key)
+      }
       audio.currentTime = 0
       void audio.play().catch(() => {})
     }
