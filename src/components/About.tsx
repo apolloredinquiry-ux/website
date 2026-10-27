@@ -1,14 +1,8 @@
 import { useEffect, useState } from 'react'
-import { FaDiscord, FaLastfm, FaRegClock } from 'react-icons/fa'
+import { FaLastfm, FaRegClock } from 'react-icons/fa'
 import { timezone } from '../data'
 import { useSettings } from '../settings'
-import { assetUrl, fetchLastfm, type LastfmTrack } from '../api'
-import {
-  avatarUrl,
-  displayName as presenceName,
-  useDiscordPresence,
-  type LanyardPresence,
-} from '../useDiscordPresence'
+import { fetchLastfm, type LastfmTrack } from '../api'
 import MusicPlayer from './MusicPlayer'
 import Reveal from './Reveal'
 
@@ -43,43 +37,10 @@ function formatDiff(hours: number) {
   return `${rounded >= 0 ? '+' : ''}${value}h`
 }
 
-const statusColors = {
-  online: '#23a55a',
-  idle: '#f0b232',
-  dnd: '#f23f43',
-  offline: '#80848e',
-} as const
-
-const statusLabels = {
-  online: 'Online',
-  idle: 'Idle',
-  dnd: 'Do not disturb',
-  offline: 'Offline',
-} as const
-
-function presenceText(presence: LanyardPresence) {
-  if (presence.spotify) {
-    return `Listening to ${presence.spotify.song} by ${presence.spotify.artist}`
-  }
-
-  const activity = presence.activities.find((item) => item.type !== 4)
-  if (activity) {
-    return activity.details
-      ? `${activity.name} — ${activity.details}`
-      : activity.name
-  }
-
-  const customStatus = presence.activities.find((item) => item.type === 4)?.state
-  return customStatus || statusLabels[presence.discord_status]
-}
-
 export default function About() {
   const [now, setNow] = useState(() => new Date())
   const [scrobbles, setScrobbles] = useState<LastfmTrack[] | null>(null)
-  const presence = useDiscordPresence()
   const { settings } = useSettings()
-  const discordName =
-    settings.displayName || presenceName(presence) || 'apollo'
   const aboutParagraphs = settings.about
     .split(/\n+/)
     .map((line) => line.trim())
@@ -149,13 +110,6 @@ export default function About() {
   const hoursAngle = ((hours % 12) + minutes / 60) * 30
   const minutesAngle = minutes * 6 + seconds * 0.1
   const secondsAngle = seconds * 6
-
-  const discordStatus = presence?.discord_status ?? 'offline'
-  const discordAvatar = settings.avatarKey
-    ? assetUrl(settings.avatarKey)
-    : avatarUrl(presence)
-  const discordStatusText = presence ? presenceText(presence) : 'apollo.ceo'
-  const discordStatusColor = statusColors[discordStatus]
 
   return (
     <section className="section about-section" id="about">
@@ -235,37 +189,6 @@ export default function About() {
 
       <Reveal delay={110}>
         <div className="about-grid">
-          <a
-            className="discord-card"
-            href={settings.discord}
-            target="_blank"
-            rel="noreferrer"
-          >
-            <div className="discord-avatar-wrap">
-              <img
-                className="discord-avatar"
-                src={discordAvatar}
-                alt={`${discordName} Discord avatar`}
-              />
-              <span className="discord-badge" aria-hidden="true">
-                <FaDiscord />
-              </span>
-              <span
-                className="presence-dot"
-                style={{ background: discordStatusColor }}
-                aria-hidden="true"
-              />
-            </div>
-            <div className="discord-info">
-              <span className="discord-name">{discordName}</span>
-              <span className="discord-status" title={discordStatusText}>
-                <span className="discord-status-text">
-                  {discordStatusText}
-                </span>
-              </span>
-            </div>
-          </a>
-
           <div className="tz-card">
             <span className="tz-label">
               <FaRegClock aria-hidden="true" /> {zoneAbbr}
