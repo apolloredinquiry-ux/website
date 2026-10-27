@@ -50,9 +50,6 @@ function allowedOrigin(origin) {
   if (origin === 'https://apollo.ceo' || origin === 'https://www.apollo.ceo') {
     return origin
   }
-  if (origin === 'https://site-6bec7ccfa23e4c03b68ab6ca06119ec1.freebuff.page') {
-    return origin
-  }
   if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return origin
   return null
 }
