@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import { FaDiscord, FaRegClock } from 'react-icons/fa'
 import { timezone } from '../data'
 import { useSettings } from '../settings'
+import { assetUrl } from '../api'
 import {
   avatarUrl,
+  displayName as presenceName,
   useDiscordPresence,
-  useDisplayName,
   type LanyardPresence,
 } from '../useDiscordPresence'
 import MusicPlayer from './MusicPlayer'
@@ -75,8 +76,9 @@ function presenceText(presence: LanyardPresence) {
 export default function About() {
   const [now, setNow] = useState(() => new Date())
   const presence = useDiscordPresence()
-  const discordName = useDisplayName()
   const { settings } = useSettings()
+  const discordName =
+    settings.displayName || presenceName(presence) || 'apollo'
   const aboutParagraphs = settings.about
     .split(/\n+/)
     .map((line) => line.trim())
@@ -134,7 +136,9 @@ export default function About() {
   const secondsAngle = seconds * 6
 
   const discordStatus = presence?.discord_status ?? 'offline'
-  const discordAvatar = avatarUrl(presence)
+  const discordAvatar = settings.avatarKey
+    ? assetUrl(settings.avatarKey)
+    : avatarUrl(presence)
   const discordStatusText = presence ? presenceText(presence) : 'apollo.ceo'
   const discordStatusColor = statusColors[discordStatus]
 

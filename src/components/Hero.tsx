@@ -5,21 +5,24 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import { FaArrowDown, FaEye, FaMapMarkerAlt } from 'react-icons/fa'
-import { badges, socials } from '../data'
+import { badges, profile, socials } from '../data'
+import { assetUrl } from '../api'
 import { useSettings } from '../settings'
 import {
   avatarUrl,
+  displayName,
   useDiscordPresence,
-  useDisplayName,
 } from '../useDiscordPresence'
 import AdminAccess from './AdminAccess'
 
 export default function Hero() {
   const cardRef = useRef<HTMLDivElement>(null)
-  const name = useDisplayName()
   const presence = useDiscordPresence()
-  const avatar = avatarUrl(presence)
   const { settings } = useSettings()
+  const name = settings.displayName || displayName(presence) || profile.fallbackName
+  const avatar = settings.avatarKey
+    ? assetUrl(settings.avatarKey)
+    : avatarUrl(presence)
   const links = socials.map((social) =>
     social.label === 'Discord' ? { ...social, href: settings.discord } : social,
   )

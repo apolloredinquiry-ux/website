@@ -126,6 +126,17 @@ function sanitizeProfile(input, previous) {
   const views = text(input.views, 32)
   const location = text(input.location, 80)
   const about = text(input.about, 1200)
+  // Older clients omit the display name and avatar; keep what is stored.
+  const displayName =
+    input.displayName === undefined
+      ? typeof base.displayName === 'string'
+        ? base.displayName.slice(0, 60)
+        : ''
+      : text(input.displayName, 60)
+  const avatarKey =
+    input.avatarKey === undefined
+      ? keptKey(base.avatarKey, ASSET_KEY)
+      : parseKey(input.avatarKey, ASSET_KEY)
   // Older clients omit the Discord link; keep the stored one instead of resetting it.
   const discordValue =
     input.discord === undefined ? base.discord : input.discord
@@ -143,6 +154,7 @@ function sanitizeProfile(input, previous) {
       : parseKey(input.trackKey, TRACK_KEY)
 
   if (views === null || location === null || about === null) return null
+  if (displayName === null || avatarKey === undefined) return null
   if (typeof input.locationGlow !== 'boolean') return null
   if (typeof input.customTrack !== 'boolean') return null
   if (trackKey === undefined) return null
@@ -196,6 +208,8 @@ function sanitizeProfile(input, previous) {
     locationGlow: input.locationGlow,
     discord,
     about,
+    displayName: displayName ?? '',
+    avatarKey,
     trackKey,
     trackTitle: trackTitle ?? '',
     trackArtist: trackArtist ?? '',
@@ -367,7 +381,7 @@ async function handleRequest(request, env) {
 
       // Drop uploads the new profile no longer references.
       const keep = new Set(
-        [profile.trackKey, profile.imageKey, profile.backgroundKey].filter(
+        [profile.trackKey, profile.imageKey, profile.backgroundKey, profile.avatarKey].filter(
           (key) => typeof key === 'string',
         ),
       )
@@ -375,6 +389,7 @@ async function handleRequest(request, env) {
         previous && previous.trackKey,
         previous && previous.imageKey,
         previous && previous.backgroundKey,
+        previous && previous.avatarKey,
       ].filter((key) => typeof key === 'string' && !keep.has(key))
       await Promise.allSettled(stale.map((key) => env.FILES.delete(key)))
 

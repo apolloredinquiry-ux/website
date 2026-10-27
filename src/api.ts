@@ -8,6 +8,8 @@ export type RemoteProfile = {
   location: string
   locationGlow: boolean
   discord?: string
+  displayName?: string
+  avatarKey?: string | null
   about: string
   trackKey: string | null
   trackTitle: string

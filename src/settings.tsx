@@ -23,6 +23,8 @@ export type Settings = {
   location: string
   locationGlow: boolean
   discord: string
+  displayName: string
+  avatarKey: string | null
   about: string
   trackKey: string | null
   trackSrc: string
@@ -44,6 +46,7 @@ type SettingsContextValue = {
   save: (patch: Partial<Settings>, key: string) => Promise<void>
   upload: (file: File, key: string) => Promise<void>
   uploadImage: (file: File, key: string) => Promise<void>
+  uploadAvatar: (file: File, key: string) => Promise<void>
   uploadBackground: (file: File, key: string) => Promise<void>
   reset: (key: string) => Promise<void>
 }
@@ -55,6 +58,8 @@ export const defaultSettings: Settings = {
   location: profile.location,
   locationGlow: false,
   discord: profile.discord,
+  displayName: '',
+  avatarKey: null,
   about: "i stay with the 5's",
   trackKey: null,
   trackSrc: track.src,
@@ -79,6 +84,8 @@ function fromRemote(remote: RemoteProfile): Settings {
       typeof remote.discord === 'string' && remote.discord
         ? remote.discord
         : profile.discord,
+    displayName: remote.displayName ?? '',
+    avatarKey: remote.avatarKey ?? null,
     about: remote.about,
     trackKey: remote.trackKey,
     trackSrc: remote.trackKey ? trackUrl(remote.trackKey) : track.src,
@@ -105,6 +112,8 @@ function toRemote(settings: Settings): RemoteProfile {
     location: settings.location,
     locationGlow: settings.locationGlow,
     discord: settings.discord,
+    displayName: settings.displayName,
+    avatarKey: settings.avatarKey,
     about: settings.about,
     trackKey: settings.trackKey,
     trackTitle: settings.trackTitle,
@@ -234,6 +243,19 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     [settings],
   )
 
+  const uploadAvatar = useCallback(
+    async (file: File, key: string) => {
+      const asset = await uploadAsset(file, key)
+      const saved = await saveProfile(
+        toRemote({ ...settings, avatarKey: asset.assetKey }),
+        key,
+      )
+      setSettings(fromRemote(saved))
+      writeCache(saved)
+    },
+    [settings],
+  )
+
   const uploadBackground = useCallback(
     async (file: File, key: string) => {
       const asset = await uploadAsset(file, key)
@@ -258,8 +280,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo(
-    () => ({ settings, loading, save, upload, uploadImage, uploadBackground, reset }),
-    [settings, loading, save, upload, uploadImage, uploadBackground, reset],
+    () => ({
+      settings,
+      loading,
+      save,
+      upload,
+      uploadImage,
+      uploadAvatar,
+      uploadBackground,
+      reset,
+    }),
+    [settings, loading, save, upload, uploadImage, uploadAvatar, uploadBackground, reset],
   )
 
   return (

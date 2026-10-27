@@ -26,11 +26,19 @@ export default function AdminPanel({
   adminKey: string
   onClose: () => void
 }) {
-  const { settings, save, upload, uploadImage, uploadBackground, reset } =
-    useSettings()
+  const {
+    settings,
+    save,
+    upload,
+    uploadImage,
+    uploadAvatar,
+    uploadBackground,
+    reset,
+  } = useSettings()
   const [views, setViews] = useState(settings.views)
   const [location, setLocation] = useState(settings.location)
   const [discord, setDiscord] = useState(settings.discord)
+  const [displayName, setDisplayName] = useState(settings.displayName)
   const [about, setAbout] = useState(settings.about)
   const [glow, setGlow] = useState(settings.locationGlow)
   const [caption, setCaption] = useState(settings.imageCaption)
@@ -40,7 +48,7 @@ export default function AdminPanel({
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState<
-    'save' | 'upload' | 'image' | 'background' | 'reset' | null
+    'save' | 'upload' | 'image' | 'avatar' | 'background' | 'reset' | null
   >(null)
 
   useEffect(() => {
@@ -81,6 +89,7 @@ export default function AdminPanel({
           location: location.trim(),
           locationGlow: glow,
           discord: discordLink,
+          displayName: displayName.trim().slice(0, 60),
           about: about.trim(),
           imageCaption: caption.trim(),
           imageRadius: radius,
@@ -155,6 +164,48 @@ export default function AdminPanel({
     }
   }
 
+  const handleAvatarFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    if (
+      !file.type.startsWith('image/') &&
+      !/\.(jpe?g|png|webp|gif|avif)$/i.test(file.name)
+    ) {
+      setError('choose an image file')
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('image must be under 10 MB')
+      return
+    }
+
+    setError('')
+    setBusy('avatar')
+    try {
+      await uploadAvatar(file, adminKey)
+      setSaved(true)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'could not upload')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const removeAvatar = async () => {
+    setBusy('avatar')
+    setError('')
+    try {
+      await save({ avatarKey: null }, adminKey)
+      setSaved(true)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'could not remove')
+    } finally {
+      setBusy(null)
+    }
+  }
+
   const handleBackgroundFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     event.target.value = ''
@@ -221,6 +272,7 @@ export default function AdminPanel({
       setViews(defaultSettings.views)
       setLocation(defaultSettings.location)
       setDiscord(defaultSettings.discord)
+      setDisplayName(defaultSettings.displayName)
       setAbout(defaultSettings.about)
       setGlow(defaultSettings.locationGlow)
       setCaption(defaultSettings.imageCaption)
@@ -291,6 +343,49 @@ export default function AdminPanel({
               onChange={(event) => setLocation(event.target.value)}
             />
           </label>
+
+          <label className="admin-field">
+            <span className="admin-label">Name</span>
+            <input
+              className="admin-input"
+              value={displayName}
+              maxLength={60}
+              spellCheck={false}
+              placeholder="leave empty to use your Discord name"
+              onChange={(event) => setDisplayName(event.target.value)}
+            />
+          </label>
+
+          <div className="admin-group">
+            <span className="admin-group-title">Profile picture</span>
+
+            <div className="admin-song">
+              <span className="admin-song-name">
+                {settings.avatarKey ? 'Custom picture' : 'Using Discord picture'}
+              </span>
+              <label
+                className={`admin-upload ${busy === 'avatar' ? 'is-busy' : ''}`}
+              >
+                {busy === 'avatar' ? 'Uploading…' : 'Upload'}
+                <input
+                  type="file"
+                  accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.avif"
+                  onChange={handleAvatarFile}
+                  disabled={busy !== null}
+                />
+              </label>
+            </div>
+            {settings.avatarKey && (
+              <button
+                className="admin-link"
+                type="button"
+                disabled={busy !== null}
+                onClick={() => void removeAvatar()}
+              >
+                Use Discord picture
+              </button>
+            )}
+          </div>
 
           <label className="admin-field">
             <span className="admin-label">Discord link</span>

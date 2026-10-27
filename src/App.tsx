@@ -4,12 +4,16 @@ import About from './components/About'
 import Background from './components/Background'
 import GalleryImage from './components/GalleryImage'
 import Hero from './components/Hero'
-import { useDisplayName } from './useDiscordPresence'
+import { useSettings } from './settings'
+import { displayName as presenceName, useDiscordPresence } from './useDiscordPresence'
 import useSectionPaging from './useSectionPaging'
+import { profile } from './data'
 
 export default function App() {
   const [entered, setEntered] = useState(false)
-  const name = useDisplayName()
+  const { settings } = useSettings()
+  const presence = useDiscordPresence()
+  const name = settings.displayName || presenceName(presence) || profile.fallbackName
 
   useSectionPaging(entered)
 
