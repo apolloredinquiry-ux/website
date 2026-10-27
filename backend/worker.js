@@ -70,6 +70,8 @@ function withCors(response, origin) {
   })
 }
 
+const LASTFM_USER = 'ogcera'
+
 function json(data, status, origin) {
   return withCors(
     new Response(JSON.stringify(data), { status, headers: JSON_HEADERS }),
@@ -385,11 +387,40 @@ async function handleRequest(request, env) {
           '/api/track/<key>',
           '/api/asset',
           '/api/asset/<key>',
+          '/api/lastfm',
         ],
       },
       200,
       origin,
     )
+  }
+
+  if (pathname === '/api/lastfm' && request.method === 'GET') {
+    if (!env.LASTFM_API_KEY) return json({ error: 'not configured' }, 503, origin)
+    try {
+      const api = new URL('https://ws.audioscrobbler.com/2.0/')
+      api.search = new URLSearchParams({
+        method: 'user.getrecenttracks',
+        user: LASTFM_USER,
+        limit: '8',
+        format: 'json',
+        api_key: env.LASTFM_API_KEY,
+      }).toString()
+      const upstream = await fetch(api, { cf: { cacheTtl: 60, cacheEverything: true } })
+      if (!upstream.ok) return json({ error: 'lastfm unavailable' }, 502, origin)
+      const data = await upstream.json()
+      const tracks = (data?.recenttracks?.track ?? []).slice(0, 8).map((track) => ({
+        name: String(track.name ?? ''),
+        artist: String(track.artist?.['#text'] ?? ''),
+        image: String(track.image?.[1]?.['#text'] ?? ''),
+        url: String(track.url ?? ''),
+        nowPlaying: track['@attr']?.nowplaying === 'true',
+        playedAt: Number(track.date?.uts ?? 0) * 1000 || null,
+      }))
+      return json({ user: LASTFM_USER, tracks }, 200, origin)
+    } catch {
+      return json({ error: 'lastfm unavailable' }, 502, origin)
+    }
   }
 
   if (pathname === '/api/profile' && request.method === 'GET') {

@@ -101,6 +101,22 @@ export async function uploadAsset(
   return payload
 }
 
+export type LastfmTrack = {
+  name: string
+  artist: string
+  image: string
+  url: string
+  nowPlaying: boolean
+  playedAt: number | null
+}
+
+export async function fetchLastfm(): Promise<LastfmTrack[]> {
+  const response = await fetch(`${API_BASE}/api/lastfm`)
+  if (!response.ok) throw new Error('scrobbles unavailable')
+  const payload = (await response.json()) as { tracks: LastfmTrack[] }
+  return payload.tracks
+}
+
 export async function uploadTrack(file: File, key: string): Promise<string> {
   const form = new FormData()
   form.append('file', file)

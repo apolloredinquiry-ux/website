@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { FaDiscord, FaRegClock } from 'react-icons/fa'
+import { FaDiscord, FaLastfm, FaRegClock } from 'react-icons/fa'
 import { timezone } from '../data'
 import { useSettings } from '../settings'
-import { assetUrl } from '../api'
+import { assetUrl, fetchLastfm, type LastfmTrack } from '../api'
 import {
   avatarUrl,
   displayName as presenceName,
@@ -75,6 +75,7 @@ function presenceText(presence: LanyardPresence) {
 
 export default function About() {
   const [now, setNow] = useState(() => new Date())
+  const [scrobbles, setScrobbles] = useState<LastfmTrack[] | null>(null)
   const presence = useDiscordPresence()
   const { settings } = useSettings()
   const discordName =
@@ -87,6 +88,20 @@ export default function About() {
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 1000)
     return () => window.clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    const load = () =>
+      fetchLastfm()
+        .then((tracks) => active && setScrobbles(tracks))
+        .catch(() => active && setScrobbles(null))
+    load()
+    const id = window.setInterval(load, 60000)
+    return () => {
+      active = false
+      window.clearInterval(id)
+    }
   }, [])
 
   const parts = Object.fromEntries(
@@ -157,6 +172,66 @@ export default function About() {
       </Reveal>
 
       <MusicPlayer />
+
+      <Reveal delay={80}>
+        <a
+          className="lastfm-button"
+          href="https://www.last.fm/user/ogcera"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <FaLastfm aria-hidden="true" /> last.fm/ogcera
+        </a>
+      </Reveal>
+
+      {scrobbles && scrobbles.length > 0 && (
+        <Reveal delay={90}>
+          <div className="scrobbles-card">
+            <div className="scrobbles-head">
+              <span className="scrobbles-title">
+                <FaLastfm aria-hidden="true" /> recent scrobbles
+              </span>
+              <a
+                className="scrobbles-user"
+                href="https://www.last.fm/user/ogcera"
+                target="_blank"
+                rel="noreferrer"
+              >
+                last.fm/ogcera
+              </a>
+            </div>
+            <ul className="scrobbles-list">
+              {scrobbles.map((track, index) => (
+                <li key={`${track.url}-${index}`} className="scrobble">
+                  {track.image ? (
+                    <img src={track.image} alt="" loading="lazy" />
+                  ) : (
+                    <span className="scrobble-blank" aria-hidden="true" />
+                  )}
+                  <div className="scrobble-info">
+                    <a href={track.url} target="_blank" rel="noreferrer">
+                      {track.name}
+                    </a>
+                    <span>{track.artist}</span>
+                  </div>
+                  <span className="scrobble-when">
+                    {track.nowPlaying
+                      ? 'now playing'
+                      : track.playedAt
+                        ? new Date(track.playedAt).toLocaleString('en-GB', {
+                            day: 'numeric',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Reveal>
+      )}
 
       <Reveal delay={110}>
         <div className="about-grid">

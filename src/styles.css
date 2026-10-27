@@ -758,6 +758,108 @@ main {
   padding: 26px;
 }
 
+.lastfm-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 10px 18px;
+  border: 2px solid rgba(39, 39, 39, 0.2);
+  border-radius: 999px;
+  background: rgba(28, 28, 28, 0.4);
+  color: #fff;
+  font-size: 14px;
+  text-decoration: none;
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+}
+
+.scrobbles-card {
+  margin-top: 18px;
+  padding: 22px 26px;
+  border: 2px solid rgba(39, 39, 39, 0.2);
+  border-radius: 40px;
+  background: rgba(28, 28, 28, 0.4);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  color: #fff;
+}
+
+.scrobbles-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.scrobbles-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  opacity: 0.85;
+}
+
+.scrobbles-user {
+  font-size: 13px;
+  color: inherit;
+  opacity: 0.6;
+}
+
+.scrobbles-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.scrobble {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.scrobble img,
+.scrobble-blank {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.scrobble-info {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.scrobble-info a,
+.scrobble-info span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scrobble-info a {
+  color: #fff;
+  text-decoration: none;
+}
+
+.scrobble-info span,
+.scrobble-when {
+  font-size: 13px;
+  opacity: 0.6;
+}
+
+.scrobble-when {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .discord-avatar-wrap {
   position: relative;
   flex: 0 0 auto;
