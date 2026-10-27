@@ -1,5 +1,5 @@
 export const API_BASE =
-  'https://site-257c6e06c7b74a449ec9935688df3722.freebuff.page'
+  'https://site-c5a002a802034f98a93ed1d0f3360266.freebuff.page'
 
 export type AssetKind = 'image' | 'video'
 
