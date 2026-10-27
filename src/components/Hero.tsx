@@ -106,6 +106,18 @@ export default function Hero() {
           ))}
         </ul>
 
+        <a
+          className="hero-status"
+          href={settings.discord}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {settings.discord.replace(/^https?:\/\//, '')}
+          <span className="status-caret" aria-hidden="true">
+            |
+          </span>
+        </a>
+
         <nav className="socials" aria-label="Social links">
           {links.map(({ label, href, Icon }) => (
             <a
